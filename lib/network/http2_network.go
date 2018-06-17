@@ -223,7 +223,10 @@ func (t *HTTP2Network) setNotReadyHandler() {
 	t.server.Handler = handlers.CombinedLoggingHandler(t.config.HTTP2LogOutput, handler)
 }
 
-func (t *HTTP2Network) AddHandler(ctx context.Context, pattern string, handler func(context.Context, *HTTP2Network) HandlerFunc) (err error) {
+func (t *HTTP2Network) AddHandler(ctx context.Context, args ...interface{}) (err error) {
+	pattern := args[0].(string)
+	handler := args[1].(func(context.Context, *HTTP2Network) HandlerFunc)
+
 	t.handlers[pattern] = handler(ctx, t)
 	return nil
 }

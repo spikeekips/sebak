@@ -6,6 +6,7 @@ import (
 
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/storage"
+	observable "github.com/GianlucaGuarini/go-observable"
 )
 
 // BlockAccount is account model in block. the storage should support,
@@ -27,6 +28,8 @@ type BlockAccount struct {
 	Balance    string
 	Checkpoint string
 }
+
+var BlockAccountObserver *observable.Observable = observable.New()
 
 func NewBlockAccount(address string, balance Amount, checkpoint string) *BlockAccount {
 	return &BlockAccount{
@@ -62,6 +65,9 @@ func (b *BlockAccount) Save(st *sebakstorage.LevelDBBackend) (err error) {
 		err = st.New(createdKey, b.Address)
 	}
 
+	if err == nil {
+		BlockAccountObserver.Trigger(fmt.Sprintf("saved-%s", b.Address), b)
+	}
 	return
 }
 

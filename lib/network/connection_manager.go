@@ -127,7 +127,7 @@ func (c *ConnectionManager) connectingValidator(v *sebakcommon.Validator) {
 	for _ = range ticker.C {
 		err := c.connectValidator(v)
 		if err != nil {
-			c.log.Error("failed to connect", "validator", v, "error", err)
+			//c.log.Error("failed to connect", "validator", v, "error", err)
 			continue
 		}
 

@@ -46,6 +46,10 @@ func (t *MemoryNetwork) SetContext(ctx context.Context) {
 	t.ctx = ctx
 }
 
+func (t *MemoryNetwork) AddHandler(context.Context, ...interface{}) (err error) {
+	return
+}
+
 func (t *MemoryNetwork) GetClient(endpoint *sebakcommon.Endpoint) NetworkClient {
 	n, ok := memoryNetworks[endpoint.String()]
 	if !ok {
