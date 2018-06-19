@@ -1,12 +1,14 @@
 package sebaknetwork
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
 
 	"boscoin.io/sebak/lib/common"
+	"boscoin.io/sebak/lib/error"
 )
 
 type HTTP2NetworkClient struct {
@@ -130,5 +132,26 @@ func (c *HTTP2NetworkClient) SendBallot(message sebakcommon.Serializable) (err e
 	}
 	defer response.Body.Close()
 
+	return
+}
+
+func (c *HTTP2NetworkClient) GetAccount(address string) (body []byte, err error) {
+	headers := c.DefaultHeaders()
+	headers.Set("Content-Type", "application/json")
+
+	u := c.resolvePath(fmt.Sprintf("/account/%s", address))
+
+	var response *http.Response
+	response, err = c.client.Get(u.String(), headers)
+	if err != nil {
+		return
+	}
+	if response.StatusCode == 404 {
+		err = sebakerror.ErrorBlockAccountDoesNotExists
+		return
+	}
+
+	defer response.Body.Close()
+	body, err = ioutil.ReadAll(response.Body)
 	return
 }

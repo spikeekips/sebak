@@ -16,6 +16,8 @@ import (
 func PrintFlagsError(cmd *cobra.Command, flagName string, err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: invalid '%s'; %v\n\n", flagName, err)
+	} else {
+		fmt.Fprintf(os.Stderr, "error: %v\n\n", flagName)
 	}
 
 	cmd.Help()

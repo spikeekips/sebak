@@ -203,7 +203,7 @@ func (nr *NodeRunner) handleMessage() {
 	for message := range nr.network.ReceiveMessage() {
 		switch message.Type {
 		case sebaknetwork.ConnectMessage:
-			nr.log.Debug("got connect", "message", message.Head(50))
+			//nr.log.Debug("got connect", "message", message.Head(50))
 			if _, err := sebakcommon.NewValidatorFromString(message.Data); err != nil {
 				nr.log.Error("invalid validator data was received", "data", message.Data)
 				continue
@@ -239,12 +239,13 @@ func (nr *NodeRunner) handleMessage() {
 			nr.log.Debug("got ballot", "message", message.Head(50))
 
 			checker := &NodeRunnerHandleBallotChecker{
-				DefaultChecker: sebakcommon.DefaultChecker{nr.handleBallotCheckerFuncs},
-				NodeRunner:     nr,
-				CurrentNode:    nr.currentNode,
-				NetworkID:      nr.networkID,
-				Message:        message,
-				VotingHole:     VotingNOTYET,
+				GenesisBlockCheckpoint: sebakcommon.MakeGenesisCheckpoint(nr.networkID),
+				DefaultChecker:         sebakcommon.DefaultChecker{nr.handleBallotCheckerFuncs},
+				NodeRunner:             nr,
+				CurrentNode:            nr.currentNode,
+				NetworkID:              nr.networkID,
+				Message:                message,
+				VotingHole:             VotingNOTYET,
 			}
 			if err = sebakcommon.RunChecker(checker, nr.handleBallotCheckerDeferFunc); err != nil {
 				if _, ok := err.(sebakcommon.CheckerErrorStop); ok {
