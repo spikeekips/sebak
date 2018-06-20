@@ -42,7 +42,9 @@ func ConnectHandler(ctx context.Context, t *HTTP2Network) HandlerFunc {
 		}
 
 		// and then connect to remote
-		t.ReceiveChannel() <- Message{Type: ConnectMessage, Data: body}
+		go func() {
+			t.ReceiveChannel() <- Message{Type: ConnectMessage, Data: body}
+		}()
 
 		// send current node info
 		o, _ := currentNode.Serialize()
@@ -69,7 +71,9 @@ func MessageHandler(ctx context.Context, t *HTTP2Network) HandlerFunc {
 			http.Error(w, "Error reading request body", http.StatusInternalServerError)
 		}
 
-		t.ReceiveChannel() <- Message{Type: MessageFromClient, Data: body}
+		go func() {
+			t.ReceiveChannel() <- Message{Type: MessageFromClient, Data: body}
+		}()
 
 		// TODO return with the link to check the status of message
 		return
@@ -92,7 +96,9 @@ func BallotHandler(ctx context.Context, t *HTTP2Network) HandlerFunc {
 			http.Error(w, "Error reading request body", http.StatusInternalServerError)
 		}
 
-		t.ReceiveChannel() <- Message{Type: BallotMessage, Data: body}
+		go func() {
+			t.ReceiveChannel() <- Message{Type: BallotMessage, Data: body}
+		}()
 		return
 	}
 }
