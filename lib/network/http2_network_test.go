@@ -196,13 +196,19 @@ func TestHTTP2NetworkSendMessage(t *testing.T) {
 	go s0.Start()
 	defer s0.Stop()
 
-	c0 := s0.GetClient(s0.Endpoint())
-
 	msg := NewDummyMessage("findme")
-	returnMsg, err := c0.SendMessage(msg)
-	if err != nil {
-		t.Errorf("failed to SendMessage: %v", err)
-		return
+	var returnMsg []byte
+	for {
+		var err error
+		c0 := s0.GetClient(s0.Endpoint())
+
+		returnMsg, err = c0.SendMessage(msg)
+		if err != nil {
+			fmt.Printf("failed to SendMessage: %v\n", err)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		break
 	}
 
 	returnStr := removeWhiteSpaces(string(returnMsg))
