@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"unicode"
 
 	"math/rand"
 	"net"
 	"strconv"
-	"sync"
 	"time"
 
 	"boscoin.io/sebak/lib/common"
@@ -36,6 +36,7 @@ func getPort() string {
 			}
 		}
 	})
+
 	return testPort
 }
 
@@ -68,38 +69,7 @@ const (
 	keyPath  = "key.pem"
 )
 
-func createNewHTTP2Network(t *testing.T) (kp *keypair.Full, mn *HTTP2Network, validator *sebakcommon.Validator) {
-	g := NewKeyGenerator(dirPath, certPath, keyPath)
-
-	var config HTTP2NetworkConfig
-	endpoint, err := sebakcommon.NewEndpointFromString(fmt.Sprintf("https://localhost:%s?NodeName=n1", getPort()))
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	queries := endpoint.Query()
-	queries.Add("TLSCertFile", g.GetCertPath())
-	queries.Add("TLSKeyFile", g.GetKeyPath())
-	endpoint.RawQuery = queries.Encode()
-
-	config, err = NewHTTP2NetworkConfigFromEndpoint(endpoint)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	mn = NewHTTP2Network(config)
-
-	kp, _ = keypair.Random()
-	validator, _ = sebakcommon.NewValidator(kp.Address(), mn.Endpoint(), "")
-	validator.SetKeypair(kp)
-
-	mn.SetContext(context.WithValue(context.Background(), "currentNode", validator))
-
-	return
-}
-
-func createNewHTTP2NetworkNew(t *testing.T) (
+func createNewHTTP2Network(t *testing.T) (
 	kp *keypair.Full,
 	mn *HTTP2Network,
 	validator *sebakcommon.Validator,
@@ -137,13 +107,16 @@ func createNewHTTP2NetworkNew(t *testing.T) (
 		mn.Ready()
 		go mn.Start()
 
+		time.Sleep(500 * time.Millisecond)
+
 		// check connection availability
 		for {
-			if _, err := net.Dial("tcp", fmt.Sprintf("localhost:%s", port)); err != nil {
+			_, err := net.DialTimeout("tcp", fmt.Sprintf("localhost:%s", port), 100*time.Millisecond)
+			if err != nil {
 				time.Sleep(1 * time.Second)
 				continue
 			}
-			break
+			return
 		}
 	}
 
@@ -168,11 +141,9 @@ func removeWhiteSpaces(str string) string {
 }
 
 func TestHTTP2NetworkGetNodeInfo(t *testing.T) {
-	_, s0, currentNode := createNewHTTP2Network(t)
+	_, s0, currentNode, startFunc := createNewHTTP2Network(t)
 	s0.SetMessageBroker(TestMessageBroker{})
-	s0.Ready()
-
-	go s0.Start()
+	startFunc()
 	defer s0.Stop()
 
 	c0 := s0.GetClient(s0.Endpoint())
@@ -206,11 +177,9 @@ func (r StringResponseMessageBroker) ResponseMessage(w http.ResponseWriter, _ st
 func (r StringResponseMessageBroker) ReceiveMessage(*HTTP2Network, Message) {}
 
 func TestHTTP2NetworkMessageBrokerResponseMessage(t *testing.T) {
-	_, s0, currentNode := createNewHTTP2Network(t)
+	_, s0, currentNode, startFunc := createNewHTTP2Network(t)
 	s0.SetMessageBroker(StringResponseMessageBroker{"ResponseMessage"})
-	s0.Ready()
-
-	go s0.Start()
+	startFunc()
 	defer s0.Stop()
 
 	c0 := s0.GetClient(s0.Endpoint())
@@ -221,11 +190,9 @@ func TestHTTP2NetworkMessageBrokerResponseMessage(t *testing.T) {
 }
 
 func TestHTTP2NetworkConnect(t *testing.T) {
-	_, s0, currentNode := createNewHTTP2Network(t)
+	_, s0, currentNode, startFunc := createNewHTTP2Network(t)
 	s0.SetMessageBroker(TestMessageBroker{})
-	s0.Ready()
-
-	go s0.Start()
+	startFunc()
 	defer s0.Stop()
 
 	c0 := s0.GetClient(s0.Endpoint())
@@ -240,7 +207,7 @@ func TestHTTP2NetworkConnect(t *testing.T) {
 }
 
 func TestHTTP2NetworkSendMessage(t *testing.T) {
-	_, s0, _, startFunc := createNewHTTP2NetworkNew(t)
+	_, s0, _, startFunc := createNewHTTP2Network(t)
 	s0.SetMessageBroker(TestMessageBroker{})
 	startFunc()
 	defer s0.Stop()
@@ -256,7 +223,7 @@ func TestHTTP2NetworkSendMessage(t *testing.T) {
 }
 
 func TestHTTP2NetworkSendBallot(t *testing.T) {
-	_, s0, _, startFunc := createNewHTTP2NetworkNew(t)
+	_, s0, _, startFunc := createNewHTTP2Network(t)
 	s0.SetMessageBroker(TestMessageBroker{})
 	startFunc()
 	defer s0.Stop()

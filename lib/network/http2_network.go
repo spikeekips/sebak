@@ -208,7 +208,13 @@ func (t *HTTP2Network) Start() (err error) {
 }
 
 func (t *HTTP2Network) Stop() {
-	t.server.Close()
+	timer := time.NewTimer(1 * time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		t.server.Shutdown(ctx)
+	}()
+	<-timer.C
+	cancel()
 }
 
 func (t *HTTP2Network) ReceiveChannel() chan Message {
