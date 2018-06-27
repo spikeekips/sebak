@@ -227,7 +227,17 @@ func TestHTTP2NetworkSendBallot(t *testing.T) {
 	c0 := s0.GetClient(s0.Endpoint())
 
 	msg := NewDummyMessage("findme")
-	returnMsg, _ := c0.SendBallot(msg)
+
+	var returnMsg []byte
+	for {
+		var err error
+		if returnMsg, err = c0.SendBallot(msg); err != nil {
+			fmt.Printf("failed to SendBallot: %v\n", err)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		break
+	}
 
 	returnStr := removeWhiteSpaces(string(returnMsg))
 	sendMsg := removeWhiteSpaces(msg.String())
