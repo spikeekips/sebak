@@ -1,23 +1,23 @@
 package sebak
 
 import (
-	"boscoin.io/sebak/lib/storage"
 	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
+	"net"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/gorilla/mux"
+
+	"boscoin.io/sebak/lib/common"
+	"boscoin.io/sebak/lib/storage"
 )
 
 func TestStreaming(t *testing.T) {
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-
 	// Setting Server
 	storageConfig, err := sebakstorage.NewConfigFromString("memory://")
 	if err != nil {
@@ -30,26 +30,53 @@ func TestStreaming(t *testing.T) {
 	}
 	defer storage.Close()
 
+	host := fmt.Sprintf("localhost:%d", sebakcommon.GetFreePort())
+
 	router := mux.NewRouter()
 	router.HandleFunc("/account/{address}", GetAccountHandler(storage)).Methods("GET")
-	server := &http.Server{Addr: ":5000", Handler: router}
+	server := &http.Server{Addr: host, Handler: router}
 	go server.ListenAndServe()
+	defer func() {
+		timer := time.NewTimer(500 * time.Millisecond)
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() {
+			server.Shutdown(ctx)
+		}()
+		<-timer.C
+		cancel()
+	}()
+
+	// check connection availability
+	for {
+		if _, err := net.DialTimeout("tcp", host, 100*time.Millisecond); err != nil {
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		break
+	}
 
 	// Make Dummy BlockAccount
 	ba := testMakeBlockAccount()
 	ba.Save(storage)
 	prev := ba.GetBalance()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	// Do stream Request to the Server
 	go func() {
-		req, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:5000/account/%s", ba.Address), nil)
-		if err != nil {
+		defer wg.Done()
 
+		req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/account/%s", host, ba.Address), nil)
+		if err != nil {
+			t.Errorf("failed to make request: %v", err)
+			return
 		}
 		req.Header.Set("Accept", "text/event-stream")
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			t.Error("Server not yet initialized")
+			t.Errorf("Server not yet initialized: %v", err)
+			return
 		}
 
 		if err != nil {
@@ -77,7 +104,6 @@ func TestStreaming(t *testing.T) {
 			prev = cba.GetBalance()
 		}
 		resp.Body.Close()
-		wg.Done()
 	}()
 
 	// Makes Some Events
@@ -90,5 +116,4 @@ func TestStreaming(t *testing.T) {
 	}
 
 	wg.Wait()
-	server.Shutdown(context.Background())
 }

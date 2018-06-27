@@ -9,9 +9,7 @@ import (
 	"testing"
 	"unicode"
 
-	"math/rand"
 	"net"
-	"strconv"
 	"time"
 
 	"boscoin.io/sebak/lib/common"
@@ -19,22 +17,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testPort = "5000"
+var testPort int = 5000
 var once sync.Once
 
-func getPort() string {
+func getPort() int {
 	once.Do(func() {
-		for {
-			s := rand.NewSource(int64(time.Now().Nanosecond()))
-			r := rand.New(s)
-			testPort = strconv.Itoa(r.Intn(16383) + 49152) // ephemeral ports range 49152 ~ 65535
-
-			ln, err := net.Listen("tcp", ":"+testPort)
-			if err == nil {
-				ln.Close()
-				break
-			}
-		}
+		testPort = sebakcommon.GetFreePort()
 	})
 
 	return testPort
@@ -79,7 +67,7 @@ func createNewHTTP2Network() (
 	g := NewKeyGenerator(dirPath, certPath, keyPath)
 
 	var config HTTP2NetworkConfig
-	host := fmt.Sprintf("localhost:%s", getPort())
+	host := fmt.Sprintf("localhost:%d", getPort())
 
 	var endpoint *sebakcommon.Endpoint
 	endpoint, err = sebakcommon.NewEndpointFromString(fmt.Sprintf("https://%s?NodeName=n1", host))

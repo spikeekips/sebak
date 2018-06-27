@@ -2,9 +2,12 @@ package sebakcommon
 
 import (
 	"errors"
+	"fmt"
+	"math/rand"
 	"net"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 func CheckPortInUse(port int) error {
@@ -68,4 +71,21 @@ func (e *Endpoint) UnmarshalJSON(b []byte) error {
 	*e = *p
 
 	return nil
+}
+
+func GetFreePort() int {
+	var port int
+	for {
+		s := rand.NewSource(int64(time.Now().Nanosecond()))
+		r := rand.New(s)
+		port = r.Intn(16383) + 49152 // ephemeral ports range 49152 ~ 65535
+
+		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err == nil {
+			ln.Close()
+			break
+		}
+	}
+
+	return port
 }
