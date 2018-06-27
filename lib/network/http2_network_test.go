@@ -99,6 +99,57 @@ func createNewHTTP2Network(t *testing.T) (kp *keypair.Full, mn *HTTP2Network, va
 	return
 }
 
+func createNewHTTP2NetworkNew(t *testing.T) (
+	kp *keypair.Full,
+	mn *HTTP2Network,
+	validator *sebakcommon.Validator,
+	startFunc func(),
+) {
+	g := NewKeyGenerator(dirPath, certPath, keyPath)
+
+	var config HTTP2NetworkConfig
+	port := getPort()
+	endpoint, err := sebakcommon.NewEndpointFromString(fmt.Sprintf("https://localhost:%s?NodeName=n1", port))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	queries := endpoint.Query()
+	queries.Add("TLSCertFile", g.GetCertPath())
+	queries.Add("TLSKeyFile", g.GetKeyPath())
+	endpoint.RawQuery = queries.Encode()
+
+	config, err = NewHTTP2NetworkConfigFromEndpoint(endpoint)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	mn = NewHTTP2Network(config)
+
+	kp, _ = keypair.Random()
+	validator, _ = sebakcommon.NewValidator(kp.Address(), mn.Endpoint(), "")
+	validator.SetKeypair(kp)
+
+	mn.SetContext(context.WithValue(context.Background(), "currentNode", validator))
+
+	startFunc = func() {
+		mn.Ready()
+		go mn.Start()
+
+		// check connection availability
+		for {
+			if _, err := net.Dial("tcp", fmt.Sprintf("localhost:%s", port)); err != nil {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			break
+		}
+	}
+
+	return
+}
+
 type TestMessageBroker struct{}
 
 func (r TestMessageBroker) ResponseMessage(w http.ResponseWriter, o string) {
@@ -189,27 +240,14 @@ func TestHTTP2NetworkConnect(t *testing.T) {
 }
 
 func TestHTTP2NetworkSendMessage(t *testing.T) {
-	_, s0, _ := createNewHTTP2Network(t)
+	_, s0, _, startFunc := createNewHTTP2NetworkNew(t)
 	s0.SetMessageBroker(TestMessageBroker{})
-	s0.Ready()
-
-	go s0.Start()
+	startFunc()
 	defer s0.Stop()
 
 	msg := NewDummyMessage("findme")
-	var returnMsg []byte
-	for {
-		var err error
-		c0 := s0.GetClient(s0.Endpoint())
-
-		returnMsg, err = c0.SendMessage(msg)
-		if err != nil {
-			fmt.Printf("failed to SendMessage: %v\n", err)
-			time.Sleep(1 * time.Second)
-			continue
-		}
-		break
-	}
+	c0 := s0.GetClient(s0.Endpoint())
+	returnMsg, _ := c0.SendMessage(msg)
 
 	returnStr := removeWhiteSpaces(string(returnMsg))
 	sendMsg := removeWhiteSpaces(msg.String())
@@ -218,26 +256,15 @@ func TestHTTP2NetworkSendMessage(t *testing.T) {
 }
 
 func TestHTTP2NetworkSendBallot(t *testing.T) {
-	_, s0, _ := createNewHTTP2Network(t)
+	_, s0, _, startFunc := createNewHTTP2NetworkNew(t)
 	s0.SetMessageBroker(TestMessageBroker{})
-	s0.Ready()
-	go s0.Start()
+	startFunc()
 	defer s0.Stop()
 
 	c0 := s0.GetClient(s0.Endpoint())
 
 	msg := NewDummyMessage("findme")
-
-	var returnMsg []byte
-	for {
-		var err error
-		if returnMsg, err = c0.SendBallot(msg); err != nil {
-			fmt.Printf("failed to SendBallot: %v\n", err)
-			time.Sleep(1 * time.Second)
-			continue
-		}
-		break
-	}
+	returnMsg, _ := c0.SendBallot(msg)
 
 	returnStr := removeWhiteSpaces(string(returnMsg))
 	sendMsg := removeWhiteSpaces(msg.String())
