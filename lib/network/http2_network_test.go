@@ -22,10 +22,6 @@ import (
 var testPort = "5000"
 var once sync.Once
 
-func assertLooseStringEqual(t *testing.T, a, b, msg string) {
-	assert.Equal(t, strings.Trim(a, " \n"), strings.Trim(b, " \n"), msg)
-}
-
 func getPort() string {
 	once.Do(func() {
 		for {
@@ -170,7 +166,7 @@ func TestHTTP2NetworkMessageBrokerResponseMessage(t *testing.T) {
 
 	returnMsg, _ := c0.Connect(currentNode)
 
-	assertLooseStringEqual(t, string(returnMsg), "ResponseMessage", "The connectNode and the return should be the same.")
+	assert.Equal(t, string(returnMsg), "ResponseMessage", "The connectNode and the return should be the same.")
 }
 
 func TestHTTP2NetworkConnect(t *testing.T) {
@@ -189,7 +185,7 @@ func TestHTTP2NetworkConnect(t *testing.T) {
 	returnMsg, _ := c0.Connect(currentNode)
 	returnStr := removeWhiteSpaces(string(returnMsg))
 
-	assertLooseStringEqual(t, returnStr, nodeStr, "The connectNode and the return should be the same.")
+	assert.Equal(t, returnStr, nodeStr, "The connectNode and the return should be the same.")
 }
 
 func TestHTTP2NetworkSendMessage(t *testing.T) {
@@ -203,12 +199,16 @@ func TestHTTP2NetworkSendMessage(t *testing.T) {
 	c0 := s0.GetClient(s0.Endpoint())
 
 	msg := NewDummyMessage("findme")
-	returnMsg, _ := c0.SendMessage(msg)
+	returnMsg, err := c0.SendMessage(msg)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	returnStr := removeWhiteSpaces(string(returnMsg))
 	sendMsg := removeWhiteSpaces(msg.String())
 
-	assertLooseStringEqual(t, returnStr, sendMsg, "The sendMessage and the return should be the same.")
+	assert.Equal(t, returnStr, sendMsg, "The sendMessage and the return should be the same.")
 }
 
 func TestHTTP2NetworkSendBallot(t *testing.T) {
@@ -226,5 +226,5 @@ func TestHTTP2NetworkSendBallot(t *testing.T) {
 	returnStr := removeWhiteSpaces(string(returnMsg))
 	sendMsg := removeWhiteSpaces(msg.String())
 
-	assertLooseStringEqual(t, returnStr, sendMsg, "The sendBallot and the return should be the same.")
+	assert.Equal(t, returnStr, sendMsg, "The sendBallot and the return should be the same.")
 }
