@@ -201,7 +201,7 @@ func TestHTTP2NetworkSendMessage(t *testing.T) {
 	msg := NewDummyMessage("findme")
 	returnMsg, err := c0.SendMessage(msg)
 	if err != nil {
-		t.Error(err)
+		t.Errorf("failed to SendMessage: %v", err)
 		return
 	}
 
