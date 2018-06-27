@@ -24,7 +24,10 @@ before_install:
 - chmod +x $GOPATH/bin/dep
 
 install:
+- mkdir -p $HOME/gopath/src/boscoin.io
+- export TRAVIS_BUILD_DIR=$HOME/gopath/src/boscoin.io/sebak
+- mv $HOME/gopath/src/github.com/spikeekips/sebak $HOME/gopath/src/boscoin.io/sebak
 - dep ensure
 
 script:
-- go test ./... -v
+- cd $HOME/gopath/src/boscoin.io/sebak; - go test ./... -v
