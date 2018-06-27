@@ -69,19 +69,21 @@ const (
 	keyPath  = "key.pem"
 )
 
-func createNewHTTP2Network(t *testing.T) (
+func createNewHTTP2Network() (
 	kp *keypair.Full,
 	mn *HTTP2Network,
 	validator *sebakcommon.Validator,
 	startFunc func(),
+	err error,
 ) {
 	g := NewKeyGenerator(dirPath, certPath, keyPath)
 
 	var config HTTP2NetworkConfig
-	port := getPort()
-	endpoint, err := sebakcommon.NewEndpointFromString(fmt.Sprintf("https://localhost:%s?NodeName=n1", port))
+	host := fmt.Sprintf("localhost:%s", getPort())
+
+	var endpoint *sebakcommon.Endpoint
+	endpoint, err = sebakcommon.NewEndpointFromString(fmt.Sprintf("https://%s?NodeName=n1", host))
 	if err != nil {
-		t.Error(err)
 		return
 	}
 
@@ -92,7 +94,6 @@ func createNewHTTP2Network(t *testing.T) (
 
 	config, err = NewHTTP2NetworkConfigFromEndpoint(endpoint)
 	if err != nil {
-		t.Error(err)
 		return
 	}
 	mn = NewHTTP2Network(config)
@@ -111,9 +112,8 @@ func createNewHTTP2Network(t *testing.T) (
 
 		// check connection availability
 		for {
-			_, err := net.DialTimeout("tcp", fmt.Sprintf("localhost:%s", port), 100*time.Millisecond)
-			if err != nil {
-				time.Sleep(1 * time.Second)
+			if _, err := net.DialTimeout("tcp", host, 100*time.Millisecond); err != nil {
+				time.Sleep(50 * time.Millisecond)
 				continue
 			}
 			return
@@ -141,7 +141,12 @@ func removeWhiteSpaces(str string) string {
 }
 
 func TestHTTP2NetworkGetNodeInfo(t *testing.T) {
-	_, s0, currentNode, startFunc := createNewHTTP2Network(t)
+	_, s0, currentNode, startFunc, err := createNewHTTP2Network()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	s0.SetMessageBroker(TestMessageBroker{})
 	startFunc()
 	defer s0.Stop()
@@ -177,7 +182,12 @@ func (r StringResponseMessageBroker) ResponseMessage(w http.ResponseWriter, _ st
 func (r StringResponseMessageBroker) ReceiveMessage(*HTTP2Network, Message) {}
 
 func TestHTTP2NetworkMessageBrokerResponseMessage(t *testing.T) {
-	_, s0, currentNode, startFunc := createNewHTTP2Network(t)
+	_, s0, currentNode, startFunc, err := createNewHTTP2Network()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	s0.SetMessageBroker(StringResponseMessageBroker{"ResponseMessage"})
 	startFunc()
 	defer s0.Stop()
@@ -190,7 +200,12 @@ func TestHTTP2NetworkMessageBrokerResponseMessage(t *testing.T) {
 }
 
 func TestHTTP2NetworkConnect(t *testing.T) {
-	_, s0, currentNode, startFunc := createNewHTTP2Network(t)
+	_, s0, currentNode, startFunc, err := createNewHTTP2Network()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	s0.SetMessageBroker(TestMessageBroker{})
 	startFunc()
 	defer s0.Stop()
@@ -207,7 +222,12 @@ func TestHTTP2NetworkConnect(t *testing.T) {
 }
 
 func TestHTTP2NetworkSendMessage(t *testing.T) {
-	_, s0, _, startFunc := createNewHTTP2Network(t)
+	_, s0, _, startFunc, err := createNewHTTP2Network()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	s0.SetMessageBroker(TestMessageBroker{})
 	startFunc()
 	defer s0.Stop()
@@ -223,7 +243,12 @@ func TestHTTP2NetworkSendMessage(t *testing.T) {
 }
 
 func TestHTTP2NetworkSendBallot(t *testing.T) {
-	_, s0, _, startFunc := createNewHTTP2Network(t)
+	_, s0, _, startFunc, err := createNewHTTP2Network()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	s0.SetMessageBroker(TestMessageBroker{})
 	startFunc()
 	defer s0.Stop()

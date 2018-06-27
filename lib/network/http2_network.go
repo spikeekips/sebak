@@ -208,7 +208,7 @@ func (t *HTTP2Network) Start() (err error) {
 }
 
 func (t *HTTP2Network) Stop() {
-	timer := time.NewTimer(1 * time.Second)
+	timer := time.NewTimer(500 * time.Millisecond)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		t.server.Shutdown(ctx)
