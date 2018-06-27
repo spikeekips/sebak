@@ -30,4 +30,4 @@ install:
 - dep ensure
 
 script:
-- cd $HOME/gopath/src/boscoin.io/sebak; - go test ./... -v
+- cd $HOME/gopath/src/boscoin.io/sebak; go test ./... -v
