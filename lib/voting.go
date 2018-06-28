@@ -308,6 +308,10 @@ func (vr *VotingResult) MakeStaging(votingHole VotingHole, previousState, nextSt
 }
 
 func (vr *VotingResult) LatestStaging() VotingStateStaging {
+	if vr == nil {
+		return VotingStateStaging{}
+	}
+
 	if len(vr.Staging) < 1 {
 		return VotingStateStaging{}
 	}
