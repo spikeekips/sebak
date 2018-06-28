@@ -90,7 +90,12 @@ func TestGetAccountHandler(t *testing.T) {
 
 	// No streaming
 	req.Header.Del("Accept")
-	resp, _ = ts.Client().Do(req)
+	var err error
+	if resp, err = ts.Client().Do(req); err != nil {
+		t.Errorf("failed to request: %v", err)
+		return
+	}
+
 	reader = bufio.NewReader(resp.Body)
 	readByte, _ := ioutil.ReadAll(reader)
 	var cba = &BlockAccount{}
