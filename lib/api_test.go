@@ -96,10 +96,10 @@ func TestStreaming(t *testing.T) {
 			json.Unmarshal(line, cba)
 
 			if ba.Address != cba.Address {
-				t.Errorf("Expected:%s Actual:%s", ba.Address, cba.Address)
+				t.Errorf("Address: Expected=%s Actual=%s", ba.Address, cba.Address)
 			}
 			if cba.GetBalance()-prev != n {
-				t.Errorf("Expected:%d Actual:%d", prev+n, cba.GetBalance())
+				t.Errorf("Balance: Expected=%d Actual=%d", prev+n, cba.GetBalance())
 			}
 			prev = cba.GetBalance()
 		}
