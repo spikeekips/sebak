@@ -319,6 +319,10 @@ func (vr *VotingResult) LatestStaging() VotingStateStaging {
 }
 
 func (vr *VotingResult) CanGetResult(policy sebakcommon.VotingThresholdPolicy) bool {
+	if vr == nil {
+		return false
+	}
+
 	if vr.State == sebakcommon.BallotStateALLCONFIRM {
 		return false
 	}
