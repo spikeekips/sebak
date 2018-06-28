@@ -89,6 +89,7 @@ func TestGetAccountHandler(t *testing.T) {
 	wg.Wait()
 
 	// No streaming
+	req, _ = http.NewRequest("GET", url, nil)
 	req.Header.Del("Accept")
 	var err error
 	if resp, err = ts.Client().Do(req); err != nil {
