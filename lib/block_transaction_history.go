@@ -88,3 +88,26 @@ func GetBlockTransactionHistory(st *sebakstorage.LevelDBBackend, hash string) (b
 func ExistsBlockTransactionHistory(st *sebakstorage.LevelDBBackend, hash string) (bool, error) {
 	return st.Has(GetBlockTransactionHistoryKey(hash))
 }
+
+func StoreBlockTransactionInHistory(st *sebakstorage.LevelDBBackend, tx Transaction, reason error) (err error) {
+	if err == sebakerror.ErrorBlockAlreadyExists {
+		return
+	}
+
+	if err == sebakerror.ErrorNewButKnownMessage {
+		return
+	}
+
+	var found bool
+	found, err = ExistsBlockTransactionHistory(st, tx.GetHash())
+	if err != nil || found {
+		return
+	}
+
+	bth := NewBlockTransactionHistoryFromTransaction(tx, reason)
+	if err = bth.Save(st); err != nil {
+		return
+	}
+
+	return
+}

@@ -226,8 +226,8 @@ func FinishBallot(st *sebakstorage.LevelDBBackend, ballot Ballot, transactionPoo
 		tx := transactions[hash]
 
 		// save in `BlockTransactionHistory`
-		bth := NewBlockTransactionHistoryFromTransaction(tx, nil)
-		if err = bth.Save(st); err != nil {
+		if err = StoreBlockTransactionInHistory(st, tx, nil); err != nil {
+			ts.Discard()
 			return
 		}
 

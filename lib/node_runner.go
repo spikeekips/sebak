@@ -14,11 +14,12 @@ import (
 	"sort"
 	"time"
 
+	logging "github.com/inconshreveable/log15"
+
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/network"
 	"boscoin.io/sebak/lib/node"
 	"boscoin.io/sebak/lib/storage"
-	logging "github.com/inconshreveable/log15"
 )
 
 var (
@@ -350,16 +351,8 @@ func (nr *NodeRunner) handleMessageFromClient(message sebaknetwork.Message) (err
 		nr.log.Error("failed to handle message from client", "error", err)
 
 		if checker.Transaction.GetHash() != "" {
-			found, errTh := ExistsBlockTransactionHistory(nr.Storage(), checker.Transaction.GetHash())
-			if errTh != nil {
-				return errTh
-			}
-
-			if !found {
-				bth := NewBlockTransactionHistoryFromTransaction(checker.Transaction, err)
-				if errTh = bth.Save(nr.Storage()); errTh != nil {
-					return errTh
-				}
+			if err = StoreBlockTransactionInHistory(nr.Storage(), checker.Transaction, err); err != nil {
+				return
 			}
 		}
 
@@ -578,12 +571,8 @@ func (nr *NodeRunner) proposeNewBallot(roundNumber uint64) error {
 		}
 		invalidTransactions = append(invalidTransactions, hash)
 
-		// save in `BlockTransactionHistory`
-		if tx, found := nr.Consensus().TransactionPool.Get(hash); !found {
-			continue
-		} else {
-			bth := NewBlockTransactionHistoryFromTransaction(tx, errors.New("invalid transaction"))
-			if err := bth.Save(nr.Storage()); err != nil {
+		if tx, found := nr.Consensus().TransactionPool.Get(hash); found {
+			if err := StoreBlockTransactionInHistory(nr.Storage(), tx, nil); err != nil {
 				return err
 			}
 		}
