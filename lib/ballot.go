@@ -224,9 +224,14 @@ func FinishBallot(st *sebakstorage.LevelDBBackend, ballot Ballot, transactionPoo
 
 	for _, hash := range ballot.B.Proposed.Transactions {
 		tx := transactions[hash]
-		raw, _ := json.Marshal(tx)
 
-		bt := NewBlockTransactionFromTransaction(tx, raw)
+		// save in `BlockTransactionHistory`
+		bth := NewBlockTransactionHistoryFromTransaction(tx, nil)
+		if err = bth.Save(st); err != nil {
+			return
+		}
+
+		bt := NewBlockTransactionFromTransaction(tx)
 		if err = bt.Save(ts); err != nil {
 			ts.Discard()
 			return

@@ -348,6 +348,21 @@ func (nr *NodeRunner) handleMessageFromClient(message sebaknetwork.Message) (err
 			return
 		}
 		nr.log.Error("failed to handle message from client", "error", err)
+
+		if checker.Transaction.GetHash() != "" {
+			found, errTh := ExistsBlockTransactionHistory(nr.Storage(), checker.Transaction.GetHash())
+			if errTh != nil {
+				return errTh
+			}
+
+			if !found {
+				bth := NewBlockTransactionHistoryFromTransaction(checker.Transaction, err)
+				if errTh = bth.Save(nr.Storage()); errTh != nil {
+					return errTh
+				}
+			}
+		}
+
 		return
 	}
 
@@ -554,6 +569,26 @@ func (nr *NodeRunner) proposeNewBallot(roundNumber uint64) error {
 			}
 		}
 	}
+
+	// remove invalid transactions
+	var invalidTransactions []string
+	for _, hash := range availableTransactions {
+		if _, found := sebakcommon.InStringArray(transactionsChecker.ValidTransactions, hash); found {
+			continue
+		}
+		invalidTransactions = append(invalidTransactions, hash)
+
+		// save in `BlockTransactionHistory`
+		if tx, found := nr.Consensus().TransactionPool.Get(hash); !found {
+			continue
+		} else {
+			bth := NewBlockTransactionHistoryFromTransaction(tx, errors.New("invalid transaction"))
+			if err := bth.Save(nr.Storage()); err != nil {
+				return err
+			}
+		}
+	}
+	nr.Consensus().TransactionPool.Remove(invalidTransactions...)
 
 	// TODO validate transactions
 	ballot := NewBallot(nr.localNode, round, transactionsChecker.ValidTransactions)

@@ -67,11 +67,6 @@ func CheckNodeRunnerHandleMessageHistory(c sebakcommon.Checker, args ...interfac
 		return
 	}
 
-	bt := NewTransactionHistoryFromTransaction(checker.Transaction, checker.Message.Data)
-	if err = bt.Save(checker.NodeRunner.Storage()); err != nil {
-		return
-	}
-
 	checker.NodeRunner.Log().Debug("saved in history", "transaction", checker.Transaction.GetHash())
 
 	return

@@ -28,18 +28,25 @@ type BlockTransactionHistory struct {
 
 	Confirmed string
 	Created   string
-	Message   string
-
-	isSaved bool
+	Message   []byte
+	Error     string
 }
 
-func NewTransactionHistoryFromTransaction(tx Transaction, message []byte) BlockTransactionHistory {
+func NewBlockTransactionHistoryFromTransaction(tx Transaction, err error) BlockTransactionHistory {
+	var errorString string
+	if err != nil {
+		errorString = err.Error()
+	}
+
+	raw, _ := tx.Serialize()
+
 	return BlockTransactionHistory{
 		Hash:      tx.H.Hash,
 		Source:    tx.B.Source,
 		Confirmed: sebakcommon.NowISO8601(),
 		Created:   tx.H.Created,
-		Message:   string(message),
+		Message:   raw,
+		Error:     errorString,
 	}
 }
 
@@ -52,10 +59,6 @@ func (bt BlockTransactionHistory) Serialize() (encoded []byte, err error) {
 	return
 }
 func (bt *BlockTransactionHistory) Save(st *sebakstorage.LevelDBBackend) (err error) {
-	if bt.isSaved {
-		return sebakerror.ErrorAlreadySaved
-	}
-
 	key := GetBlockTransactionHistoryKey(bt.Hash)
 
 	var exists bool
@@ -71,8 +74,6 @@ func (bt *BlockTransactionHistory) Save(st *sebakstorage.LevelDBBackend) (err er
 		return
 	}
 
-	bt.isSaved = true
-
 	return nil
 }
 
@@ -81,20 +82,9 @@ func GetBlockTransactionHistory(st *sebakstorage.LevelDBBackend, hash string) (b
 		return
 	}
 
-	bt.isSaved = true
 	return
 }
 
 func ExistsBlockTransactionHistory(st *sebakstorage.LevelDBBackend, hash string) (bool, error) {
 	return st.Has(GetBlockTransactionHistoryKey(hash))
-}
-
-// BlockTransactionError stores all the non-confirmed transactions and it's reason.
-// the storage should support,
-//  * find by `Hash`
-
-type BlockTransactionError struct {
-	Hash string
-
-	Reason string
 }

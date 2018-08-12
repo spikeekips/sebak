@@ -48,11 +48,13 @@ type BlockTransaction struct {
 	isSaved     bool
 }
 
-func NewBlockTransactionFromTransaction(tx Transaction, message []byte) BlockTransaction {
+func NewBlockTransactionFromTransaction(tx Transaction) BlockTransaction {
 	var opHashes []string
 	for _, op := range tx.B.Operations {
 		opHashes = append(opHashes, NewBlockOperationKey(op, tx))
 	}
+
+	raw, _ := tx.Serialize()
 
 	return BlockTransaction{
 		Hash:               tx.H.Hash,
@@ -66,7 +68,7 @@ func NewBlockTransactionFromTransaction(tx Transaction, message []byte) BlockTra
 		Amount:             tx.TotalAmount(true),
 
 		Created: tx.H.Created,
-		Message: message,
+		Message: raw,
 
 		transaction: tx,
 	}
