@@ -21,13 +21,6 @@ import (
 	logging "github.com/inconshreveable/log15"
 )
 
-var (
-	TimeoutExpireRound          time.Duration = time.Second * 10
-	TimeoutProposeNewBallot     time.Duration = time.Second * 2
-	TimeoutProposeNewBallotFull time.Duration = time.Second * 1
-	MaxTransactionsInBallot     int           = 1000
-)
-
 type NodeRunner struct {
 	networkID         []byte
 	localNode         *sebaknode.LocalNode
