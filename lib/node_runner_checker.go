@@ -452,7 +452,7 @@ func CheckNodeRunnerHandleACCEPTBallotStore(c sebakcommon.Checker, args ...inter
 	checker.NodeRunner.Consensus().CloseConsensus(
 		checker.Ballot.Proposer(),
 		checker.Ballot.Round(),
-		checker.VotingHole,
+		checker.FinishedVotingHole,
 	)
 	checker.NodeRunner.CloseConsensus(checker.Ballot.Round(), willStore)
 
