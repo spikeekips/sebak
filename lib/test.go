@@ -7,8 +7,32 @@ import (
 	"github.com/google/uuid"
 	"github.com/stellar/go/keypair"
 
+	"boscoin.io/sebak/lib/block"
 	"boscoin.io/sebak/lib/common"
 )
+
+func testMakeNewBlock(transactions []string) Block {
+	kp, _ := keypair.Random()
+
+	return NewBlock(
+		kp.Address(),
+		Round{
+			BlockHeight: 0,
+			BlockHash:   "",
+		},
+		transactions,
+		sebakcommon.NowISO8601(),
+	)
+}
+
+func testMakeBlockAccount() *block.BlockAccount {
+	kp, _ := keypair.Random()
+	address := kp.Address()
+	balance := sebakcommon.Amount(2000)
+	checkpoint := TestGenerateNewCheckpoint()
+
+	return block.NewBlockAccount(address, balance, checkpoint)
+}
 
 func TestMakeNewBlockOperation(networkID []byte, n int) (bos []BlockOperation) {
 	_, tx := TestMakeTransaction(networkID, n)
