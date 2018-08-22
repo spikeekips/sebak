@@ -44,4 +44,5 @@ var (
 	ErrorBallotFromUnknownValidator       = NewError(141, "ballot from unknown validator")
 	ErrorBallotAlreadyFinished            = NewError(142, "ballot already finished")
 	ErrorBallotAlreadyVoted               = NewError(143, "ballot already voted")
+	ErrorMessageHasIncorrectTime          = NewError(144, "time in message is not correct")
 )
