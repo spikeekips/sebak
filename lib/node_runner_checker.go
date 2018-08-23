@@ -10,6 +10,26 @@ import (
 	logging "github.com/inconshreveable/log15"
 )
 
+type CheckerStopCloseConsensus struct {
+	checker *NodeRunnerHandleBallotChecker
+	message string
+}
+
+func NewCheckerStopCloseConsensus(checker *NodeRunnerHandleBallotChecker, message string) CheckerStopCloseConsensus {
+	return CheckerStopCloseConsensus{
+		checker: checker,
+		message: message,
+	}
+}
+
+func (c CheckerStopCloseConsensus) Error() string {
+	return c.message
+}
+
+func (c CheckerStopCloseConsensus) Checker() sebakcommon.Checker {
+	return c.checker
+}
+
 type NodeRunnerHandleMessageChecker struct {
 	sebakcommon.DefaultChecker
 
@@ -435,9 +455,9 @@ func CheckNodeRunnerHandleACCEPTBallotStore(c sebakcommon.Checker, args ...inter
 		checker.NodeRunner.Consensus().SetLatestConsensusedBlock(block)
 		checker.Log.Debug("ballot was stored", "block", block)
 
-		err = sebakcommon.CheckerErrorStop{"ballot got consensus and will be stored"}
+		err = NewCheckerStopCloseConsensus(checker, "ballot got consensus and will be stored")
 	} else {
-		err = sebakcommon.CheckerErrorStop{"ballot got consensus"}
+		err = NewCheckerStopCloseConsensus(checker, "ballot got consensus")
 	}
 
 	checker.NodeRunner.Consensus().CloseConsensus(
