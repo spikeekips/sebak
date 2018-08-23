@@ -113,6 +113,8 @@ func NewNodeRunner(
 	nr.ctx = context.WithValue(nr.ctx, "networkID", nr.networkID)
 	nr.ctx = context.WithValue(nr.ctx, "storage", nr.storage)
 
+	nr.policy.SetValidators(len(nr.localNode.GetValidators()) + 1) // including self
+
 	nr.connectionManager = sebaknetwork.NewConnectionManager(
 		nr.localNode,
 		nr.network,
