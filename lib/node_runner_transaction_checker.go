@@ -6,7 +6,7 @@ import (
 	"boscoin.io/sebak/lib/node"
 )
 
-type NodeRunnerHandleTransactionChecker struct {
+type NodeRunnerHandleBallotTransactionChecker struct {
 	sebakcommon.DefaultChecker
 
 	NodeRunner *NodeRunner
@@ -15,15 +15,42 @@ type NodeRunnerHandleTransactionChecker struct {
 
 	Transactions         []string
 	VotingHole           VotingHole
-	ValidTransactions    []string
-	validTransactionsMap map[string]bool
+	validTransactions    []string
+	ValidTransactionsMap map[string]bool
 	CheckAll             bool
+}
+
+func (checker *NodeRunnerHandleBallotTransactionChecker) setValidTransactions(hashes []string) {
+	checker.validTransactions = hashes
+
+	checker.ValidTransactionsMap = map[string]bool{}
+	for _, hash := range hashes {
+		checker.ValidTransactionsMap[hash] = true
+	}
+
+	return
+}
+
+func (checker *NodeRunnerHandleBallotTransactionChecker) ValidTransactions() []string {
+	return checker.validTransactions
+}
+
+func (checker *NodeRunnerHandleBallotTransactionChecker) InvalidTransactions() (invalids []string) {
+	for _, hash := range checker.Transactions {
+		if _, found := checker.ValidTransactionsMap[hash]; found {
+			continue
+		}
+
+		invalids = append(invalids, hash)
+	}
+
+	return
 }
 
 // CheckNodeRunnerHandleTransactionsIsNew checks the incoming transaction is
 // already stored or not.
 func CheckNodeRunnerHandleTransactionsIsNew(c sebakcommon.Checker, args ...interface{}) (err error) {
-	checker := c.(*NodeRunnerHandleTransactionChecker)
+	checker := c.(*NodeRunnerHandleBallotTransactionChecker)
 
 	var validTransactions []string
 	for _, hash := range checker.Transactions {
@@ -40,7 +67,7 @@ func CheckNodeRunnerHandleTransactionsIsNew(c sebakcommon.Checker, args ...inter
 	}
 
 	err = nil
-	checker.ValidTransactions = validTransactions
+	checker.setValidTransactions(validTransactions)
 
 	return
 }
@@ -48,10 +75,10 @@ func CheckNodeRunnerHandleTransactionsIsNew(c sebakcommon.Checker, args ...inter
 // CheckNodeRunnerHandleTransactionsGetMissingTransaction will get the missing
 // tranactions, that is, not in `TransactionPool` from proposer.
 func CheckNodeRunnerHandleTransactionsGetMissingTransaction(c sebakcommon.Checker, args ...interface{}) (err error) {
-	checker := c.(*NodeRunnerHandleTransactionChecker)
+	checker := c.(*NodeRunnerHandleBallotTransactionChecker)
 
 	var validTransactions []string
-	for _, hash := range checker.ValidTransactions {
+	for _, hash := range checker.validTransactions {
 		if !checker.NodeRunner.Consensus().TransactionPool.Has(hash) {
 			// TODO get transaction from proposer and check
 			// `Transaction.IsWellFormed()`
@@ -60,7 +87,7 @@ func CheckNodeRunnerHandleTransactionsGetMissingTransaction(c sebakcommon.Checke
 		validTransactions = append(validTransactions, hash)
 	}
 
-	checker.ValidTransactions = validTransactions
+	checker.setValidTransactions(validTransactions)
 
 	return
 }
@@ -68,11 +95,11 @@ func CheckNodeRunnerHandleTransactionsGetMissingTransaction(c sebakcommon.Checke
 // CheckNodeRunnerHandleTransactionsSameSource checks there are transactions
 // which has same source in the `Transactions`.
 func CheckNodeRunnerHandleTransactionsSameSource(c sebakcommon.Checker, args ...interface{}) (err error) {
-	checker := c.(*NodeRunnerHandleTransactionChecker)
+	checker := c.(*NodeRunnerHandleBallotTransactionChecker)
 
 	var validTransactions []string
 	sources := map[string]bool{}
-	for _, hash := range checker.ValidTransactions {
+	for _, hash := range checker.validTransactions {
 		tx, _ := checker.NodeRunner.Consensus().TransactionPool.Get(hash)
 		if found := sebakcommon.InStringMap(sources, tx.B.Source); found {
 			if !checker.CheckAll {
@@ -86,17 +113,17 @@ func CheckNodeRunnerHandleTransactionsSameSource(c sebakcommon.Checker, args ...
 		validTransactions = append(validTransactions, hash)
 	}
 	err = nil
-	checker.ValidTransactions = validTransactions
+	checker.setValidTransactions(validTransactions)
 
 	return
 }
 
 // CheckNodeRunnerHandleTransactionsSourceCheck calls `Transaction.Validate()`.
 func CheckNodeRunnerHandleTransactionsSourceCheck(c sebakcommon.Checker, args ...interface{}) (err error) {
-	checker := c.(*NodeRunnerHandleTransactionChecker)
+	checker := c.(*NodeRunnerHandleBallotTransactionChecker)
 
 	var validTransactions []string
-	for _, hash := range checker.ValidTransactions {
+	for _, hash := range checker.validTransactions {
 		tx, _ := checker.NodeRunner.Consensus().TransactionPool.Get(hash)
 
 		if err = tx.Validate(checker.NodeRunner.Storage()); err != nil {
@@ -109,7 +136,7 @@ func CheckNodeRunnerHandleTransactionsSourceCheck(c sebakcommon.Checker, args ..
 	}
 
 	err = nil
-	checker.ValidTransactions = validTransactions
+	checker.setValidTransactions(validTransactions)
 
 	return
 }

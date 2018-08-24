@@ -81,7 +81,21 @@ func CheckNodeRunnerHandleMessageHistory(c sebakcommon.Checker, args ...interfac
 	checker := c.(*NodeRunnerHandleMessageChecker)
 
 	var found bool
-	if found, err = ExistsBlockTransactionHistory(checker.NodeRunner.Storage(), checker.Transaction.GetHash()); found && err == nil {
+	if found, err = ExistBlockTransaction(checker.NodeRunner.Storage(), checker.Transaction.GetHash()); err != nil {
+		return
+	}
+
+	if found && err == nil {
+		checker.NodeRunner.Log().Debug("found in Block", "transction", checker.Transaction.GetHash())
+		err = sebakerror.ErrorNewButKnownMessage
+		return
+	}
+
+	if found, err = ExistsBlockTransactionHistory(checker.NodeRunner.Storage(), checker.Transaction.GetHash()); err != nil {
+		return
+	}
+
+	if found && err == nil {
 		checker.NodeRunner.Log().Debug("found in history", "transction", checker.Transaction.GetHash())
 		err = sebakerror.ErrorNewButKnownMessage
 		return
@@ -93,6 +107,30 @@ func CheckNodeRunnerHandleMessageHistory(c sebakcommon.Checker, args ...interfac
 	}
 
 	checker.NodeRunner.Log().Debug("saved in history", "transaction", checker.Transaction.GetHash())
+
+	return
+}
+
+// CheckNodeRunnerHandleMessageSameSource checks there are transactions which
+// has same source in the `TransactionPool`.
+func CheckNodeRunnerHandleMessageSameSource(c sebakcommon.Checker, args ...interface{}) (err error) {
+	checker := c.(*NodeRunnerHandleMessageChecker)
+
+	if checker.NodeRunner.Consensus().TransactionPool.IsSameSource(checker.Transaction.Source()) {
+		err = sebakerror.ErrorTransactionSameSource
+		return
+	}
+
+	return
+}
+
+// CheckNodeRunnerHandleMessageValidate validates.
+func CheckNodeRunnerHandleMessageValidate(c sebakcommon.Checker, args ...interface{}) (err error) {
+	checker := c.(*NodeRunnerHandleMessageChecker)
+
+	if err = checker.Transaction.Validate(checker.NodeRunner.Storage()); err != nil {
+		return
+	}
 
 	return
 }
@@ -166,6 +204,7 @@ func CheckNodeRunnerHandleBallotUnmarshal(c sebakcommon.Checker, args ...interfa
 // is from the known validators.
 func CheckNodeRunnerHandleBallotNotFromKnownValidators(c sebakcommon.Checker, args ...interface{}) (err error) {
 	checker := c.(*NodeRunnerHandleBallotChecker)
+
 	if checker.LocalNode.HasValidators(checker.Ballot.Source()) {
 		return
 	}
@@ -345,13 +384,14 @@ func CheckNodeRunnerHandleINITBallotValidateTransactions(c sebakcommon.Checker, 
 		return
 	}
 
-	transactionsChecker := &NodeRunnerHandleTransactionChecker{
-		DefaultChecker: sebakcommon.DefaultChecker{handleBallotTransactionCheckerFuncs},
-		NodeRunner:     checker.NodeRunner,
-		LocalNode:      checker.LocalNode,
-		NetworkID:      checker.NetworkID,
-		Transactions:   checker.Ballot.Transactions(),
-		VotingHole:     VotingNOTYET,
+	transactionsChecker := &NodeRunnerHandleBallotTransactionChecker{
+		DefaultChecker:       sebakcommon.DefaultChecker{handleBallotTransactionCheckerFuncs},
+		NodeRunner:           checker.NodeRunner,
+		LocalNode:            checker.LocalNode,
+		NetworkID:            checker.NetworkID,
+		Transactions:         checker.Ballot.Transactions(),
+		VotingHole:           VotingNOTYET,
+		ValidTransactionsMap: map[string]bool{},
 	}
 
 	err = sebakcommon.RunChecker(transactionsChecker, sebakcommon.DefaultDeferFunc)
@@ -465,7 +505,7 @@ func CheckNodeRunnerHandleACCEPTBallotStore(c sebakcommon.Checker, args ...inter
 		checker.Ballot.Round(),
 		checker.FinishedVotingHole,
 	)
-	checker.NodeRunner.CloseConsensus(checker.Ballot.Round(), willStore)
+	checker.NodeRunner.CloseConsensus(checker.Ballot, willStore)
 
 	return
 }
