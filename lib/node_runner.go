@@ -104,6 +104,8 @@ func NewNodeRunner(
 	nr.ctx = context.WithValue(nr.ctx, "networkID", nr.networkID)
 	nr.ctx = context.WithValue(nr.ctx, "storage", nr.storage)
 
+	nr.policy.SetValidators(len(nr.localNode.GetValidators()) + 1) // including 'self'
+
 	nr.connectionManager = sebaknetwork.NewConnectionManager(
 		nr.localNode,
 		nr.network,
@@ -128,6 +130,7 @@ func (nr *NodeRunner) Ready() {
 }
 
 func (nr *NodeRunner) Start() (err error) {
+	nr.log.Debug("NodeRunner started")
 	nr.Ready()
 
 	go nr.handleMessage()
@@ -179,9 +182,8 @@ func (nr *NodeRunner) Log() logging.Logger {
 
 func (nr *NodeRunner) ConnectValidators() {
 	ticker := time.NewTicker(time.Millisecond * 5)
-	for t := range ticker.C {
+	for _ = range ticker.C {
 		if !nr.network.IsReady() {
-			nr.log.Debug("current network is not ready: %v", t)
 			continue
 		}
 
@@ -242,7 +244,7 @@ func (nr *NodeRunner) handleMessage() {
 		}
 
 		if err != nil {
-			if _, ok := err.(sebakcommon.CheckerErrorStop); ok {
+			if _, ok := err.(sebakcommon.CheckerStop); ok {
 				continue
 			}
 			nr.log.Error("failed to handle sebaknetwork.Message", "message", message.Head(50), "error", err)
@@ -315,7 +317,13 @@ func (nr *NodeRunner) handleBallotMessage(message sebaknetwork.Message) (err err
 	}
 	err = sebakcommon.RunChecker(checker, nr.handleMessageCheckerDeferFunc)
 	if err != nil {
-		if _, ok := err.(sebakcommon.CheckerErrorStop); !ok {
+		if stopped, ok := err.(sebakcommon.CheckerStop); ok {
+			nr.log.Debug(
+				"stopped to handle ballot",
+				"state", baseChecker.Ballot.State(),
+				"reason", stopped.Error(),
+			)
+		} else {
 			nr.log.Error("failed to handle ballot", "error", err, "state", baseChecker.Ballot.State())
 			return
 		}
@@ -339,6 +347,10 @@ func (nr *NodeRunner) InitRound() {
 	for _ = range ticker.C {
 		var notFound bool
 		connected := nr.connectionManager.AllConnected()
+		if len(connected) < 1 {
+			continue
+		}
+
 		for address, _ := range nr.localNode.GetValidators() {
 			if _, found := sebakcommon.InStringArray(connected, address); !found {
 				notFound = true
@@ -351,7 +363,11 @@ func (nr *NodeRunner) InitRound() {
 		}
 	}
 
-	nr.log.Debug("caught up with network and connected to all validators")
+	nr.log.Debug(
+		"caught up with network and connected to all validators",
+		"connected", nr.Policy().Connected(),
+		"validators", nr.Policy().Validators(),
+	)
 
 	go nr.startRound()
 }
@@ -462,6 +478,7 @@ func (nr *NodeRunner) proposeNewBallot(roundNumber uint64) error {
 		err := sebakcommon.RunChecker(transactionsChecker, sebakcommon.DefaultDeferFunc)
 		if err != nil {
 			if _, ok := err.(sebakcommon.CheckerErrorStop); !ok {
+				nr.log.Error("error occurred in NodeRunnerHandleTransactionChecker", "error", err)
 			}
 		}
 	}

@@ -10,6 +10,26 @@ import (
 	logging "github.com/inconshreveable/log15"
 )
 
+type CheckerStopCloseConsensus struct {
+	checker *NodeRunnerHandleBallotChecker
+	message string
+}
+
+func NewCheckerStopCloseConsensus(checker *NodeRunnerHandleBallotChecker, message string) CheckerStopCloseConsensus {
+	return CheckerStopCloseConsensus{
+		checker: checker,
+		message: message,
+	}
+}
+
+func (c CheckerStopCloseConsensus) Error() string {
+	return c.message
+}
+
+func (c CheckerStopCloseConsensus) Checker() sebakcommon.Checker {
+	return c.checker
+}
+
 type NodeRunnerHandleMessageChecker struct {
 	sebakcommon.DefaultChecker
 
@@ -422,30 +442,22 @@ func CheckNodeRunnerHandleACCEPTBallotStore(c sebakcommon.Checker, args ...inter
 
 	willStore := checker.FinishedVotingHole == VotingYES
 	if checker.FinishedVotingHole == VotingYES {
-		// TODO If consensused ballot is not for next waiting block, the node
-		// will go into **catchup** status.
-
-		if checker.Ballot.TransactionsLength() < 1 {
-			willStore = false
-			checker.Log.Debug("ballot was finished, but not stored because empty transactions")
-		} else {
-			var block Block
-			block, err = FinishBallot(
-				checker.NodeRunner.Storage(),
-				checker.Ballot,
-				checker.NodeRunner.Consensus().TransactionPool,
-			)
-			if err != nil {
-				return
-			}
-
-			checker.NodeRunner.Consensus().SetLatestConsensusedBlock(block)
-			checker.Log.Debug("ballot was stored", "block", block)
+		var block Block
+		block, err = FinishBallot(
+			checker.NodeRunner.Storage(),
+			checker.Ballot,
+			checker.NodeRunner.Consensus().TransactionPool,
+		)
+		if err != nil {
+			return
 		}
 
-		err = sebakcommon.CheckerErrorStop{"ballot got consensus and will be stored"}
+		checker.NodeRunner.Consensus().SetLatestConsensusedBlock(block)
+		checker.Log.Debug("ballot was stored", "block", block)
+
+		err = NewCheckerStopCloseConsensus(checker, "ballot got consensus and will be stored")
 	} else {
-		err = sebakcommon.CheckerErrorStop{"ballot got consensus"}
+		err = NewCheckerStopCloseConsensus(checker, "ballot got consensus")
 	}
 
 	checker.NodeRunner.Consensus().CloseConsensus(
