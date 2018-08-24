@@ -46,4 +46,5 @@ var (
 	ErrorBallotAlreadyVoted                   = NewError(143, "ballot already voted")
 	ErrorBallotHasOverMaxTransactionsInBallot = NewError(144, "too many transactions in ballot")
 	ErrorTooManyOperations                    = NewError(145, "too many operations in transaction")
+	ErrorMessageHasIncorrectTime              = NewError(146, "time in message is not correct")
 )
