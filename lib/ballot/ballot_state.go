@@ -21,7 +21,7 @@ func (s State) String() string {
 	case StateALLCONFIRM:
 		return "ALLCONFIRM"
 	default:
-		return ""
+		return "NONE"
 	}
 }
 

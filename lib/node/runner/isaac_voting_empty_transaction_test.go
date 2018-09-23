@@ -37,8 +37,8 @@ func TestISAACBallotWithEmptyTransactionVoting(t *testing.T) {
 
 	nr.Consensus().SetLatestConsensusedBlock(genesisBlock)
 	latestBlock := nr.Consensus().LatestConfirmedBlock()
-	require.Equal(t, uint64(1), latestBlock.Height)
-	require.Equal(t, uint64(0), latestBlock.TotalTxs)
+	require.Equal(t, uint64(0), latestBlock.Height)
+	require.Equal(t, uint64(1), latestBlock.TotalTxs)
 
 	// Generate proposed ballot in nr
 	err := nr.proposeNewBallot(0)
@@ -95,7 +95,7 @@ func TestISAACBallotWithEmptyTransactionVoting(t *testing.T) {
 
 	lastConfirmedBlock := nr.Consensus().LatestConfirmedBlock()
 	require.Equal(t, proposer.Address(), lastConfirmedBlock.Proposer)
-	require.Equal(t, uint64(2), lastConfirmedBlock.Height)
-	require.Equal(t, uint64(0), lastConfirmedBlock.TotalTxs)
+	require.Equal(t, uint64(1), lastConfirmedBlock.Height)
+	require.Equal(t, uint64(1), lastConfirmedBlock.TotalTxs)
 	require.Equal(t, 0, len(lastConfirmedBlock.Transactions))
 }

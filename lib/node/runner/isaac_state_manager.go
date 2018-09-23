@@ -35,7 +35,7 @@ func NewISAACStateManager(nr *NodeRunner, conf *consensus.ISAACConfiguration) *I
 				Number:      0,
 				BlockHeight: 0,
 			},
-			BallotState: ballot.StateINIT,
+			BallotState: ballot.StateNONE,
 		},
 		stateTransit:    make(chan consensus.ISAACState),
 		stop:            make(chan struct{}),
@@ -44,7 +44,7 @@ func NewISAACStateManager(nr *NodeRunner, conf *consensus.ISAACConfiguration) *I
 		Conf:            conf,
 	}
 
-	genesisHeight := uint64(1)
+	genesisHeight := uint64(0)
 	genesisBlock, err := block.GetBlockByHeight(nr.storage, genesisHeight)
 	if err != nil {
 		nr.log.Error("Cannot get genesis block from storage", "height", genesisHeight)
@@ -83,7 +83,7 @@ func getBallotProposedTime(timeStr string) time.Time {
 }
 
 func calculateAverageBlockTime(genesis time.Time, blockHeight uint64) time.Duration {
-	genesisBlockHeight := uint64(1)
+	genesisBlockHeight := uint64(0)
 	height := blockHeight - genesisBlockHeight
 	sinceGenesis := time.Now().Sub(genesis)
 
@@ -147,7 +147,7 @@ func (sm *ISAACStateManager) IncreaseRound() {
 
 func (sm *ISAACStateManager) NextHeight() {
 	round := sm.State().Round
-	sm.nr.Log().Debug("begin ISAACStateManager.NextHeight()", round)
+	sm.nr.Log().Debug("begin ISAACStateManager.NextHeight()", "round", round)
 	round.BlockHeight++
 	round.Number = 0
 	sm.TransitISAACState(round, ballot.StateINIT)
@@ -199,6 +199,17 @@ func (sm *ISAACStateManager) Start() {
 			}
 		}
 	}()
+
+	// Set timer; To prevent to execute the below `TransitISAACState` before the upper go
+	// rountine.
+	go func() {
+		<-time.After(500 * time.Millisecond)
+
+		round := sm.State().Round
+		sm.nr.Log().Debug("start INIT", "round", round)
+		round.Number = 0
+		sm.TransitISAACState(round, ballot.StateINIT)
+	}()
 }
 
 func (sm *ISAACStateManager) broadcastExpiredBallot(state consensus.ISAACState) {
@@ -236,7 +247,7 @@ func (sm *ISAACStateManager) resetTimer(timer *time.Timer, state ballot.State) {
 func (sm *ISAACStateManager) proposeOrWait(timer *time.Timer, state consensus.ISAACState) {
 	timer.Reset(time.Duration(1 * time.Hour))
 	proposer := sm.nr.Consensus().SelectProposer(state.Round.BlockHeight, state.Round.Number)
-	log.Debug("selected proposer", "proposer", proposer)
+	log.Debug("selected proposer", "proposer", proposer, "state", state)
 
 	if proposer == sm.nr.localNode.Address() {
 		time.Sleep(sm.blockTimeBuffer)

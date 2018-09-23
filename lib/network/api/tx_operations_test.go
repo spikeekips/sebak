@@ -69,7 +69,7 @@ func TestGetOperationsByTxHashHandlerStream(t *testing.T) {
 	require.Nil(t, err)
 
 	tx := transaction.TestMakeTransactionWithKeypair(networkID, 10, kp)
-	bt := block.NewBlockTransactionFromTransaction("block-hash", 1, tx, nil)
+	bt := block.NewBlockTransactionFromTransaction("block-hash", 1, "", tx, nil)
 
 	boMap := make(map[string]block.BlockOperation)
 	for _, op := range tx.B.Operations {

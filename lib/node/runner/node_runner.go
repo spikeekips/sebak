@@ -434,7 +434,6 @@ func (nr *NodeRunner) StartStateManager() {
 	}
 
 	nr.isaacStateManager.Start()
-	nr.isaacStateManager.NextHeight()
 	return
 }
 

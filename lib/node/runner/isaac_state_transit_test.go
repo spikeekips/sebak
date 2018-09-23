@@ -90,7 +90,7 @@ func TestStateINITTimeoutNotProposer(t *testing.T) {
 
 	nr.StartStateManager()
 	defer nr.StopStateManager()
-	require.Equal(t, ballot.StateINIT, nr.isaacStateManager.State().BallotState)
+	require.Equal(t, ballot.StateNONE, nr.isaacStateManager.State().BallotState)
 
 	<-recv
 	require.Equal(t, ballot.StateSIGN, nr.isaacStateManager.State().BallotState)
@@ -140,7 +140,7 @@ func TestStateSIGNTimeoutProposer(t *testing.T) {
 	nr.StartStateManager()
 	defer nr.StopStateManager()
 
-	require.Equal(t, ballot.StateINIT, nr.isaacStateManager.State().BallotState)
+	require.Equal(t, ballot.StateNONE, nr.isaacStateManager.State().BallotState)
 
 	<-recv
 	require.Equal(t, 1, len(cm.Messages()))

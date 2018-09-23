@@ -6,7 +6,7 @@ const (
 	BlockPrefixHeight                     = string(0x02)
 	BlockTransactionPrefixHash            = string(0x10)
 	BlockTransactionPrefixSource          = string(0x11)
-	BlockTransactionPrefixConfirmed       = string(0x12)
+	BlockTransactionPrefixSaved           = string(0x12)
 	BlockTransactionPrefixAccount         = string(0x13)
 	BlockTransactionPrefixBlock           = string(0x14)
 	BlockOperationPrefixHash              = string(0x20)

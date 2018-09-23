@@ -6,6 +6,10 @@ const (
 	// BaseFee is the default transaction fee, if fee is lower than BaseFee, the
 	// transaction will fail validation.
 	BaseFee Amount = 10000
+
+	// GenesisBlockConfirmedTime is the time for the confirmed time of genesis
+	// block. This time is of the first commit of SEBAK.
+	GenesisBlockConfirmedTime string = "2018-04-17T5:07:31.000000000Z"
 )
 
 var (
