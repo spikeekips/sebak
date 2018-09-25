@@ -156,7 +156,8 @@ func (b *Ballot) TransactionsLength() int {
 }
 
 func (b *Ballot) Sign(kp keypair.KP, networkID []byte) {
-	if kp.Address() == b.B.Proposed.Proposer {
+	// this sould be updated when proposed time
+	if kp.Address() == b.B.Proposed.Proposer && b.State() == StateINIT {
 		b.B.Proposed.Confirmed = common.NowISO8601()
 		hash := common.MustMakeObjectHash(b.B.Proposed)
 		signature, _ := common.MakeSignature(kp, networkID, string(hash))

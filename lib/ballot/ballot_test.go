@@ -139,3 +139,54 @@ func TestBallotBadConfirmedTime(t *testing.T) {
 		require.Error(t, err, errors.ErrorMessageHasIncorrectTime)
 	}
 }
+
+func TestBallotProposedBody(t *testing.T) {
+	kp, _ := keypair.Random()
+	localNode, _ := node.NewLocalNode(kp, &common.Endpoint{}, "")
+	r := round.Round{}
+	b := NewBallot(localNode, r, []string{})
+	b.Sign(kp, networkID)
+
+	{ // update same source
+		var b0 Ballot
+		b0 = *b
+		b0.SetVote(StateSIGN, VotingNO)
+		b0.Sign(kp, networkID)
+
+		require.Equal(t, b.Source(), b0.Source())
+		require.NotEqual(t, b.Confirmed(), b0.Confirmed())
+		require.NotEqual(t, b.Vote(), b0.Vote())
+		require.NotEqual(t, b.State(), b0.State())
+		require.Equal(t, b.Proposer(), b0.Proposer())
+		require.Equal(t, b.ProposerConfirmed(), b0.ProposerConfirmed())
+		require.Equal(t, b.H.ProposerSignature, b0.H.ProposerSignature)
+		require.Equal(
+			t,
+			common.MustMakeObjectHash(b.B.Proposed),
+			common.MustMakeObjectHash(b0.B.Proposed),
+		)
+	}
+
+	{ // update different source
+		var b0 Ballot
+		b0 = *b
+		b0.SetVote(StateSIGN, VotingNO)
+
+		kpOther, _ := keypair.Random()
+		b0.Sign(kpOther, networkID)
+
+		require.NotEqual(t, b.Source(), b0.Source())
+		require.Equal(t, kpOther.Address(), b0.Source())
+		require.NotEqual(t, b.Confirmed(), b0.Confirmed())
+		require.NotEqual(t, b.Vote(), b0.Vote())
+		require.NotEqual(t, b.State(), b0.State())
+		require.Equal(t, b.Proposer(), b0.Proposer())
+		require.Equal(t, b.ProposerConfirmed(), b0.ProposerConfirmed())
+		require.Equal(t, b.H.ProposerSignature, b0.H.ProposerSignature)
+		require.Equal(
+			t,
+			common.MustMakeObjectHash(b.B.Proposed),
+			common.MustMakeObjectHash(b0.B.Proposed),
+		)
+	}
+}
