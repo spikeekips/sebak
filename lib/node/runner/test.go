@@ -79,7 +79,6 @@ func GenerateBallot(t *testing.T, proposer *node.LocalNode, round round.Round, t
 	opc, _ := ballot.NewCollectTxFeeFromBallot(*b, commonAccount.Address, tx)
 	ptx, _ := ballot.NewProposerTransactionFromBallot(*b, opc, opi)
 	b.SetProposerTransaction(ptx)
-
 	b.Sign(proposer.Keypair(), networkID)
 
 	b.SetVote(ballotState, ballot.VotingYES)
@@ -99,7 +98,6 @@ func GenerateEmptyTxBallot(t *testing.T, proposer *node.LocalNode, round round.R
 	opc, _ := ballot.NewCollectTxFeeFromBallot(*b, commonAccount.Address)
 	ptx, _ := ballot.NewProposerTransactionFromBallot(*b, opc, opi)
 	b.SetProposerTransaction(ptx)
-
 	b.Sign(proposer.Keypair(), networkID)
 
 	b.SetVote(ballotState, ballot.VotingYES)
