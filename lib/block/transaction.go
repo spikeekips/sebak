@@ -107,6 +107,44 @@ func (bt BlockTransaction) NewBlockTransactionKeyByBlock(hash string) string {
 	)
 }
 
+func (bt *BlockTransaction) Batch(st *storage.LevelDBBackend, batch *storage.Batch) (err error) {
+	if bt.isSaved {
+		return errors.ErrorAlreadySaved
+	}
+
+	key := GetBlockTransactionKey(bt.Hash)
+
+	var exists bool
+	if exists, err = st.Has(key); exists || err != nil {
+		if exists {
+			return errors.ErrorBlockAlreadyExists
+		}
+		return
+	}
+
+	batch.Put(GetBlockTransactionKey(bt.Hash), bt)
+	batch.Put(bt.NewBlockTransactionKeySource(), bt.Hash)
+	batch.Put(bt.NewBlockTransactionKeyConfirmed(), bt.Hash)
+	batch.Put(bt.NewBlockTransactionKeyByAccount(bt.Source), bt.Hash)
+	batch.Put(bt.NewBlockTransactionKeyByBlock(bt.Block), bt.Hash)
+
+	for _, op := range bt.transaction.B.Operations {
+		var bo BlockOperation
+		bo, err = NewBlockOperationFromOperation(op, bt.transaction, bt.blockHeight)
+		if err != nil {
+			return
+		}
+		if err = bo.Batch(st, batch); err != nil {
+			return
+		}
+		if pop, ok := op.B.(operation.Payable); ok {
+			batch.Put(bt.NewBlockTransactionKeyByAccount(pop.TargetAddress()), bt.Hash)
+		}
+	}
+
+	return nil
+}
+
 func (bt *BlockTransaction) Save(st *storage.LevelDBBackend) (err error) {
 	if bt.isSaved {
 		return errors.ErrorAlreadySaved

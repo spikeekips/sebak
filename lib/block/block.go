@@ -76,6 +76,24 @@ func (b Block) NewBlockKeyConfirmed() string {
 	)
 }
 
+func (b *Block) Batch(st *storage.LevelDBBackend, batch *storage.Batch) (err error) {
+	key := getBlockKey(b.Hash)
+
+	var exists bool
+	exists, err = st.Has(key)
+	if err != nil {
+		return
+	} else if exists {
+		return errors.ErrorBlockAlreadyExists
+	}
+
+	batch.Put(key, b)
+	batch.Put(b.NewBlockKeyConfirmed(), b.Hash)
+	batch.Put(getBlockKeyPrefixHeight(b.Height), b.Hash)
+
+	return
+}
+
 func (b *Block) Save(st *storage.LevelDBBackend) (err error) {
 	key := getBlockKey(b.Hash)
 

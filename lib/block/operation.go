@@ -63,6 +63,27 @@ func NewBlockOperationFromOperation(op operation.Operation, tx transaction.Trans
 	}, nil
 }
 
+func (bo *BlockOperation) Batch(st *storage.LevelDBBackend, batch *storage.Batch) (err error) {
+	if bo.isSaved {
+		return errors.ErrorAlreadySaved
+	}
+
+	key := GetBlockOperationKey(bo.Hash)
+
+	var exists bool
+	if exists, err = st.Has(key); err != nil {
+		return
+	} else if exists {
+		return errors.ErrorBlockAlreadyExists
+	}
+
+	batch.Put(key, bo)
+	batch.Put(bo.NewBlockOperationTxHashKey(), bo.Hash)
+	batch.Put(bo.NewBlockOperationSourceKey(), bo.Hash)
+
+	return nil
+}
+
 func (bo *BlockOperation) Save(st *storage.LevelDBBackend) (err error) {
 	if bo.isSaved {
 		return errors.ErrorAlreadySaved

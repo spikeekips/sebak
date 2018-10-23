@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -10,7 +9,6 @@ import (
 	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
 	leveldbUtil "github.com/syndtr/goleveldb/leveldb/util"
 
-	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/error"
 )
 
@@ -140,7 +138,7 @@ func (st *LevelDBBackend) Get(k string, i interface{}) (err error) {
 		return
 	}
 
-	if err = json.Unmarshal(b, &i); err != nil {
+	if err = Unserialize(b, &i); err != nil {
 		err = setLevelDBCoreError(err)
 		return
 	}
@@ -157,12 +155,7 @@ func (st *LevelDBBackend) New(k string, v interface{}) (err error) {
 	}
 
 	var encoded []byte
-	serializable, ok := v.(common.Serializable)
-	if ok {
-		encoded, err = serializable.Serialize()
-	} else {
-		encoded, err = common.EncodeJSONValue(v)
-	}
+	encoded, err = Serialize(v)
 	if err != nil {
 		err = setLevelDBCoreError(err)
 		return
@@ -192,7 +185,7 @@ func (st *LevelDBBackend) News(vs ...Item) (err error) {
 	batch := new(leveldb.Batch)
 	for _, v := range vs {
 		var encoded []byte
-		if encoded, err = common.EncodeJSONValue(v); err != nil {
+		if encoded, err = Serialize(v); err != nil {
 			err = setLevelDBCoreError(err)
 			return
 		}
@@ -207,7 +200,7 @@ func (st *LevelDBBackend) News(vs ...Item) (err error) {
 
 func (st *LevelDBBackend) Set(k string, v interface{}) (err error) {
 	var encoded []byte
-	if encoded, err = common.EncodeJSONValue(v); err != nil {
+	if encoded, err = Serialize(v); err != nil {
 		err = setLevelDBCoreError(err)
 		return
 	}
@@ -246,7 +239,7 @@ func (st *LevelDBBackend) Sets(vs ...Item) (err error) {
 	batch := new(leveldb.Batch)
 	for _, v := range vs {
 		var encoded []byte
-		if encoded, err = common.EncodeJSONValue(v); err != nil {
+		if encoded, err = Serialize(v); err != nil {
 			err = setLevelDBCoreError(err)
 			return
 		}
@@ -406,4 +399,8 @@ func (st *LevelDBBackend) Walk(prefix string, option *WalkOption, walkFunc WalkF
 	}
 
 	return iter.Error()
+}
+
+func (st *LevelDBBackend) BatchWrite(batch *leveldb.Batch) (err error) {
+	return st.Core.Write(batch, &leveldbOpt.WriteOptions{NoWriteMerge: true, Sync: true})
 }

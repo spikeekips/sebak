@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/syndtr/goleveldb/leveldb"
 
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/error"
@@ -429,4 +430,32 @@ func TestLevelDBWalk(t *testing.T) {
 
 	require.Equal(t, keys, walkedKeys)
 
+}
+
+func TestLeveldbBatch(t *testing.T) {
+	st := NewTestStorage()
+	defer st.Close()
+
+	kv := map[string]string{
+		"test-1": "1",
+		"test-2": "2",
+		"test-3": "3",
+		"test-4": "4",
+		"test-5": "5",
+	}
+
+	batch := &leveldb.Batch{}
+	for k, v := range kv {
+		batch.Put([]byte(k), []byte(v))
+	}
+
+	err := st.BatchWrite(batch)
+	require.Nil(t, err)
+
+	var out []byte
+	for k, v := range kv {
+		out, err = st.Core.Get([]byte(k), nil)
+		require.Nil(t, err)
+		require.Equal(t, v, string(out))
+	}
 }

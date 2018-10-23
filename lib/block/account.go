@@ -47,6 +47,30 @@ func (b *BlockAccount) String() string {
 	return string(common.MustJSONMarshal(b))
 }
 
+func (b *BlockAccount) Batch(st *storage.LevelDBBackend, batch *storage.Batch) (err error) {
+	key := GetBlockAccountKey(b.Address)
+
+	var exists bool
+	exists, err = st.Has(key)
+	if err != nil {
+		return
+	}
+
+	batch.Put(key, b)
+	if !exists {
+		batch.Put(GetBlockAccountCreatedKey(common.GetUniqueIDFromUUID()), b.Address)
+	}
+
+	bac := BlockAccountSequenceID{
+		SequenceID: b.SequenceID,
+		Address:    b.Address,
+		Balance:    b.GetBalance(),
+	}
+	err = bac.Batch(st, batch)
+
+	return
+}
+
 func (b *BlockAccount) Save(st *storage.LevelDBBackend) (err error) {
 	key := GetBlockAccountKey(b.Address)
 
@@ -205,6 +229,24 @@ func GetBlockAccountSequenceIDByAddressKeyPrefix(address string) string {
 
 func (b *BlockAccountSequenceID) String() string {
 	return string(common.MustJSONMarshal(b))
+}
+
+func (b *BlockAccountSequenceID) Batch(st *storage.LevelDBBackend, batch *storage.Batch) (err error) {
+	key := GetBlockAccountSequenceIDKey(b.Address, b.SequenceID)
+
+	var exists bool
+	exists, err = st.Has(key)
+	if err != nil {
+		return
+	}
+
+	batch.Put(key, b)
+
+	if !exists {
+		batch.Put(GetBlockAccountSequenceIDByAddressKey(b.Address), key)
+	}
+
+	return
 }
 
 func (b *BlockAccountSequenceID) Save(st *storage.LevelDBBackend) (err error) {
