@@ -6,6 +6,7 @@ import (
 	"boscoin.io/sebak/lib/error"
 	"boscoin.io/sebak/lib/node"
 	"boscoin.io/sebak/lib/storage"
+	"boscoin.io/sebak/lib/transaction"
 	"boscoin.io/sebak/lib/transaction/operation"
 	"boscoin.io/sebak/lib/version"
 )
@@ -35,16 +36,11 @@ func getGenesisAccount(st *storage.LevelDBBackend, operationIndex int) (account 
 		return
 	}
 
-	var bo block.BlockOperation
-	if bo, err = block.GetBlockOperation(st, bt.Operations[operationIndex]); err != nil {
+	var sbt transaction.Transaction
+	if err = common.DecodeJSONValue(bt.Message, &sbt); err != nil {
 		return
 	}
-
-	var opb operation.Body
-	if opb, err = operation.UnmarshalBodyJSON(bo.Type, bo.Body); err != nil {
-		return
-	}
-	opbp := opb.(operation.Payable)
+	opbp := sbt.B.Operations[operationIndex].B.(operation.Payable)
 
 	if account, err = block.GetBlockAccount(st, opbp.TargetAddress()); err != nil {
 		return
@@ -67,17 +63,11 @@ func GetGenesisBalance(st *storage.LevelDBBackend) (balance common.Amount, err e
 		return
 	}
 
-	var bo block.BlockOperation
-	if bo, err = block.GetBlockOperation(st, bt.Operations[0]); err != nil {
+	var sbt transaction.Transaction
+	if err = common.DecodeJSONValue(bt.Message, &sbt); err != nil {
 		return
 	}
-
-	var opb operation.Body
-	if opb, err = operation.UnmarshalBodyJSON(bo.Type, bo.Body); err != nil {
-		return
-	}
-	opbp := opb.(operation.Payable)
-
+	opbp := sbt.B.Operations[0].B.(operation.Payable)
 	balance = opbp.GetAmount()
 
 	return
