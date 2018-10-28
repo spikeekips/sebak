@@ -5,7 +5,6 @@ import (
 
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/storage"
-	"boscoin.io/sebak/lib/transaction"
 	"boscoin.io/sebak/lib/voting"
 )
 
@@ -93,12 +92,14 @@ func (b *BlockTransaction) MustSave(st *storage.LevelDBBackend) {
 	}
 }
 
+/*
 /// Version of `BlockTransaction.Save` that panics on error, usable only in tests
 func (b *BlockOperation) MustSave(st *storage.LevelDBBackend) {
 	if err := b.Save(st); err != nil {
 		panic(err)
 	}
 }
+*/
 
 func TestMakeNewBlock(transactions []string) Block {
 	kp, _ := keypair.Random()
@@ -134,6 +135,7 @@ func TestMakeNewBlockWithPrevBlock(prevBlock Block, txs []string) Block {
 	)
 }
 
+/*
 func TestMakeNewBlockOperation(networkID []byte, n int) (bos []BlockOperation) {
 	_, tx := transaction.TestMakeTransaction(networkID, n)
 
@@ -147,3 +149,4 @@ func TestMakeNewBlockOperation(networkID []byte, n int) (bos []BlockOperation) {
 
 	return
 }
+*/

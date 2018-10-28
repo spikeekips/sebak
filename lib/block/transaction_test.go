@@ -19,20 +19,22 @@ func TestNewBlockTransaction(t *testing.T) {
 	bt := NewBlockTransactionFromTransaction(block.Hash, block.Height, block.Confirmed, tx, a)
 
 	require.Equal(t, bt.Hash, tx.H.Hash)
-	require.Equal(t, bt.SequenceID, tx.B.SequenceID)
-	require.Equal(t, bt.Signature, tx.H.Signature)
-	require.Equal(t, bt.Source, tx.B.Source)
-	require.Equal(t, bt.Fee, tx.B.Fee)
-	require.Equal(t, bt.Created, tx.H.Created)
+	require.Equal(t, bt.Transaction().B.SequenceID, tx.B.SequenceID)
+	require.Equal(t, bt.Transaction().H.Signature, tx.H.Signature)
+	require.Equal(t, bt.Transaction().Source(), tx.B.Source)
+	require.Equal(t, bt.Transaction().B.Fee, tx.B.Fee)
+	require.Equal(t, bt.Transaction().H.Created, tx.H.Created)
 
-	var opHashes []string
-	for _, op := range tx.B.Operations {
-		opHashes = append(opHashes, NewBlockOperationKey(op.MakeHashString(), tx.GetHash()))
-	}
-	for i, opHash := range bt.Operations {
-		require.Equal(t, opHash, opHashes[i])
-	}
-	require.Equal(t, bt.Amount, tx.TotalAmount(true))
+	/*
+		var opHashes []string
+		for _, op := range tx.B.Operations {
+			opHashes = append(opHashes, NewBlockOperationKey(op.MakeHashString(), tx.GetHash()))
+		}
+		for i, opHash := range bt.Operations {
+			require.Equal(t, opHash, opHashes[i])
+		}
+	*/
+	require.Equal(t, bt.Transaction().TotalAmount(true), tx.TotalAmount(true))
 	require.Equal(t, bt.Message, a)
 }
 
@@ -47,13 +49,12 @@ func TestBlockTransactionSaveAndGet(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, bt.Hash, fetched.Hash)
-	require.Equal(t, bt.SequenceID, fetched.SequenceID)
-	require.Equal(t, bt.Signature, fetched.Signature)
-	require.Equal(t, bt.Source, fetched.Source)
-	require.Equal(t, bt.Fee, fetched.Fee)
-	require.Equal(t, bt.Created, fetched.Created)
-	require.Equal(t, bt.Operations, fetched.Operations)
-	require.Equal(t, len(fetched.Confirmed) > 0, true)
+	require.Equal(t, bt.Transaction().B.SequenceID, fetched.Transaction().B.SequenceID)
+	require.Equal(t, bt.Transaction().H.Signature, fetched.Transaction().H.Signature)
+	require.Equal(t, bt.Transaction().Source(), fetched.Transaction().Source())
+	require.Equal(t, bt.Transaction().B.Fee, fetched.Transaction().B.Fee)
+	require.Equal(t, bt.Transaction().H.Created, fetched.Transaction().H.Created)
+	require.Equal(t, bt.Transaction().B.Operations, fetched.Transaction().B.Operations)
 }
 
 func TestBlockTransactionSaveExisting(t *testing.T) {

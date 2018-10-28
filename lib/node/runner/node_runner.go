@@ -129,14 +129,14 @@ func NewNodeRunner(
 	{
 		// find common account
 		var commonAccount *block.BlockAccount
-		if commonAccount, err = GetCommonAccount(nr.storage); err != nil {
+		if commonAccount, err = block.GetCommonAccount(nr.storage); err != nil {
 			return
 		}
 		nr.CommonAccountAddress = commonAccount.Address
 		nr.log.Debug("common account found", "address", nr.CommonAccountAddress)
 
 		// get the initial balance of geness account
-		if nr.InitialBalance, err = GetGenesisBalance(nr.storage); err != nil {
+		if nr.InitialBalance, err = block.GetGenesisBalance(nr.storage); err != nil {
 			return
 		}
 		nr.log.Debug("initial balance found", "amount", nr.InitialBalance)

@@ -1,9 +1,8 @@
-package runner
+package block
 
 import (
 	"testing"
 
-	"boscoin.io/sebak/lib/block"
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/storage"
 
@@ -13,13 +12,13 @@ import (
 func TestGetGenesisAccount(t *testing.T) {
 	st := storage.NewTestStorage()
 
-	genesisAccount := block.NewBlockAccount(block.GenesisKP.Address(), common.Amount(1))
+	genesisAccount := NewBlockAccount(GenesisKP.Address(), common.Amount(1))
 	genesisAccount.MustSave(st)
 
-	commonAccount := block.NewBlockAccount(block.CommonKP.Address(), 0)
+	commonAccount := NewBlockAccount(CommonKP.Address(), 0)
 	commonAccount.MustSave(st)
 
-	block.MakeGenesisBlock(st, *genesisAccount, *commonAccount, networkID)
+	MakeGenesisBlock(st, *genesisAccount, *commonAccount, networkID)
 
 	fetchedGenesisAccount, err := GetGenesisAccount(st)
 	require.NoError(t, err)
@@ -38,13 +37,13 @@ func TestGetInitialBalance(t *testing.T) {
 	st := storage.NewTestStorage()
 
 	initialBalance := common.Amount(99)
-	genesisAccount := block.NewBlockAccount(block.GenesisKP.Address(), initialBalance)
+	genesisAccount := NewBlockAccount(GenesisKP.Address(), initialBalance)
 	genesisAccount.MustSave(st)
 
-	commonAccount := block.NewBlockAccount(block.CommonKP.Address(), 0)
+	commonAccount := NewBlockAccount(CommonKP.Address(), 0)
 	commonAccount.MustSave(st)
 
-	block.MakeGenesisBlock(st, *genesisAccount, *commonAccount, networkID)
+	MakeGenesisBlock(st, *genesisAccount, *commonAccount, networkID)
 
 	fetchedInitialBalance, err := GetGenesisBalance(st)
 	require.NoError(t, err)

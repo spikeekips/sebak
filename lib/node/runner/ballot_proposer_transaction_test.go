@@ -34,8 +34,8 @@ func (p *ballotCheckerProposedTransaction) Prepare() {
 	p.nr = nr
 
 	p.genesisBlock = block.GetGenesis(nr.Storage())
-	p.commonAccount, _ = GetCommonAccount(nr.Storage())
-	p.initialBalance, _ = GetGenesisBalance(nr.Storage())
+	p.commonAccount, _ = block.GetCommonAccount(nr.Storage())
+	p.initialBalance, _ = block.GetGenesisBalance(nr.Storage())
 
 	p.proposerNode = localNodes[1]
 	nr.Consensus().SetProposerSelector(FixedSelector{p.proposerNode.Address()})
@@ -730,11 +730,11 @@ func TestProposedTransactionStoreWithZeroAmount(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, blt.ProposerTransaction().GetHash(), bt.Hash)
-	require.Equal(t, blt.ProposerTransaction().Source(), bt.Source)
+	require.Equal(t, blt.ProposerTransaction().Source(), bt.Transaction().Source())
 
-	require.Equal(t, opbc.GetAmount()+opbi.GetAmount(), bt.Amount)
-	require.Equal(t, common.Amount(0), bt.Fee)
-	require.Equal(t, 2, len(bt.Operations))
+	require.Equal(t, opbc.GetAmount()+opbi.GetAmount(), bt.Transaction().TotalAmount(true))
+	require.Equal(t, common.Amount(0), bt.Transaction().B.Fee)
+	require.Equal(t, 2, len(bt.Transaction().B.Operations))
 
 	var bos []block.BlockOperation
 	iterFunc, closeFunc := block.GetBlockOperationsByTxHash(p.nr.Storage(), bt.Hash, nil)

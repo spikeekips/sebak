@@ -5,11 +5,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"boscoin.io/sebak/lib/block"
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/storage"
 	"boscoin.io/sebak/lib/transaction"
-	"github.com/stretchr/testify/require"
 )
 
 func TestResourceAccount(t *testing.T) {
@@ -56,10 +57,10 @@ func TestResourceAccount(t *testing.T) {
 			json.Unmarshal(j, &f)
 			m := f.(map[string]interface{})
 			require.Equal(t, bt.Hash, m["hash"])
-			require.Equal(t, bt.Source, m["source"])
-			require.Equal(t, bt.Fee.String(), m["fee"])
-			require.Equal(t, bt.Created, m["created"])
-			require.Equal(t, float64(len(bt.Operations)), m["operation_count"])
+			require.Equal(t, bt.Transaction().Source(), m["source"])
+			require.Equal(t, bt.Transaction().B.Fee.String(), m["fee"])
+			require.Equal(t, bt.Transaction().H.Created, m["created"])
+			require.Equal(t, float64(len(bt.Transaction().B.Operations)), m["operation_count"])
 
 			l := m["_links"].(map[string]interface{})
 			require.Equal(t, strings.Replace(URLTransactions, "{id}", bt.Hash, -1), l["self"].(map[string]interface{})["href"])
@@ -74,7 +75,8 @@ func TestResourceAccount(t *testing.T) {
 		require.NoError(t, err)
 		bt := block.NewBlockTransactionFromTransaction(common.GetUniqueIDFromUUID(), 0, common.NowISO8601(), tx, a)
 		bt.MustSave(storage)
-		bo, err := block.GetBlockOperation(storage, bt.Operations[0])
+		//bo, err := block.GetBlockOperation(storage, bt.Transaction().B.Operations[0])
+		bo, err := block.GetBlockOperation(storage, "")
 
 		ro := NewOperation(&bo)
 		r := ro.Resource()
@@ -101,9 +103,10 @@ func TestResourceAccount(t *testing.T) {
 		bt.MustSave(storage)
 
 		var rol []Resource
-		for _, boHash := range bt.Operations {
+		for _, _ = range bt.Transaction().B.Operations {
 			var bo block.BlockOperation
-			bo, err = block.GetBlockOperation(storage, boHash)
+			//bo, err = block.GetBlockOperation(storage, boHash)
+			bo, err = block.GetBlockOperation(storage, "")
 			require.NoError(t, err)
 
 			ro := NewOperation(&bo)

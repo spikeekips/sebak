@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	"github.com/gorilla/mux"
+	"github.com/stellar/go/keypair"
+
 	"boscoin.io/sebak/lib/block"
 	"boscoin.io/sebak/lib/storage"
 	"boscoin.io/sebak/lib/transaction"
-	"github.com/gorilla/mux"
-	"github.com/stellar/go/keypair"
 )
 
 var networkID []byte = []byte("sebak-test-network")
@@ -42,8 +43,9 @@ func prepareOps(storage *storage.LevelDBBackend, count int) (*keypair.Full, []bl
 		return nil, nil, err
 	}
 	var boList []block.BlockOperation
-	for _, bt := range btList {
-		bo, err := block.GetBlockOperation(storage, bt.Operations[0])
+	for _, _ = range btList {
+		//bo, err := block.GetBlockOperation(storage, bt.Transaction().B.Operations[0])
+		bo, err := block.GetBlockOperation(storage, "")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -52,15 +54,13 @@ func prepareOps(storage *storage.LevelDBBackend, count int) (*keypair.Full, []bl
 
 	return kp, boList, nil
 }
-func prepareOpsWithoutSave(count int, st *storage.LevelDBBackend) (*keypair.Full, []block.BlockOperation, error) {
-
+func prepareOpsWithoutSave(count int, st *storage.LevelDBBackend) (*keypair.Full, []block.BlockTransaction, error) {
 	kp, err := keypair.Random()
 	if err != nil {
 		return nil, nil, err
 	}
 	var txs []transaction.Transaction
 	var txHashes []string
-	var boList []block.BlockOperation
 	for i := 0; i < count; i++ {
 		tx := transaction.TestMakeTransactionWithKeypair(networkID, 1, kp)
 		txs = append(txs, tx)
@@ -68,17 +68,21 @@ func prepareOpsWithoutSave(count int, st *storage.LevelDBBackend) (*keypair.Full
 	}
 
 	theBlock := block.TestMakeNewBlockWithPrevBlock(block.GetLatestBlock(st), txHashes)
+
+	var bts []block.BlockTransaction
+	m, _ := tx.Serialize()
 	for _, tx := range txs {
-		for _, op := range tx.B.Operations {
-			bo, err := block.NewBlockOperationFromOperation(op, tx, theBlock.Height)
-			if err != nil {
-				panic(err)
-			}
-			boList = append(boList, bo)
-		}
+		bt, _ := NewBlockTransactionFromTransaction(
+			theBlock.Hash,
+			theBlock.Height,
+			theBlock.Confirmed,
+			tx,
+			m,
+		)
+		bts = append(bts, bt)
 	}
 
-	return kp, boList, nil
+	return kp, bts, nil
 }
 
 func prepareTxs(storage *storage.LevelDBBackend, count int) (*keypair.Full, []block.BlockTransaction, error) {

@@ -87,8 +87,8 @@ func testFinishBallotWithBatch(withBatch bool, numberOfTransactions, numberOfOpe
 	nr.Consensus().SetProposerSelector(FixedSelector{proposerNode.Address()})
 
 	genesisBlock := block.GetGenesis(nr.Storage())
-	commonAccount, _ := GetCommonAccount(nr.Storage())
-	initialBalance, _ := GetGenesisBalance(nr.Storage())
+	commonAccount, _ := block.GetCommonAccount(nr.Storage())
+	initialBalance, _ := block.GetGenesisBalance(nr.Storage())
 
 	var blt *ballot.Ballot
 	{

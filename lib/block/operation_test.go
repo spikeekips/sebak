@@ -1,16 +1,6 @@
 package block
 
-import (
-	"testing"
-
-	"boscoin.io/sebak/lib/common"
-	"boscoin.io/sebak/lib/error"
-	"boscoin.io/sebak/lib/storage"
-
-	"boscoin.io/sebak/lib/transaction"
-	"github.com/stretchr/testify/require"
-)
-
+/*
 func TestNewBlockOperationFromOperation(t *testing.T) {
 	_, tx := transaction.TestMakeTransaction(networkID, 1)
 
@@ -128,3 +118,4 @@ func TestBlockOperationSaveByTransaction(t *testing.T) {
 		require.Equal(t, bo.Body, encoded)
 	}
 }
+*/

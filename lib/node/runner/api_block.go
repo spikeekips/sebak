@@ -122,7 +122,6 @@ func (nh NetworkHandlerNode) GetBlocksHandler(w http.ResponseWriter, r *http.Req
 		if options.Mode == GetBlocksOptionsModeFull {
 			var err error
 			var tx block.BlockTransaction
-			var op block.BlockOperation
 
 			if tx, err = block.GetBlockTransaction(nh.storage, b.ProposerTransaction); err != nil {
 				nh.renderNodeItem(w, NodeItemError, err)
@@ -135,14 +134,6 @@ func (nh NetworkHandlerNode) GetBlocksHandler(w http.ResponseWriter, r *http.Req
 					continue
 				}
 				nh.renderNodeItem(w, NodeItemBlockTransaction, tx)
-
-				for _, opHash := range tx.Operations {
-					if op, err = block.GetBlockOperation(nh.storage, opHash); err != nil {
-						nh.renderNodeItem(w, NodeItemError, err)
-						continue
-					}
-					nh.renderNodeItem(w, NodeItemBlockOperation, op)
-				}
 			}
 		}
 	}

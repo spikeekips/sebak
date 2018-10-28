@@ -180,7 +180,7 @@ func (g *getMissingTransactionTesting) Prepare() {
 
 	g.genesisBlock = block.GetGenesis(g.proposerNR.Storage())
 	g.commonAccount, _ = GetCommonAccount(g.proposerNR.Storage())
-	g.initialBalance, _ = GetGenesisBalance(g.proposerNR.Storage())
+	g.initialBalance, _ = block.GetGenesisBalance(g.proposerNR.Storage())
 }
 
 func (g *getMissingTransactionTesting) MakeBallot(numberOfTxs int) (blt *ballot.Ballot) {
@@ -363,7 +363,7 @@ func (p *irregularIncomingBallot) prepare() {
 
 	p.genesisBlock = block.GetGenesis(p.nr.Storage())
 	p.commonAccount, _ = GetCommonAccount(p.nr.Storage())
-	p.initialBalance, _ = GetGenesisBalance(p.nr.Storage())
+	p.initialBalance, _ = block.GetGenesisBalance(p.nr.Storage())
 
 	p.nr.Consensus().SetProposerSelector(FixedSelector{p.nr.Node().Address()})
 }

@@ -5,12 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stellar/go/keypair"
+	"github.com/stretchr/testify/require"
+
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/error"
 	"boscoin.io/sebak/lib/storage"
 	"boscoin.io/sebak/lib/transaction/operation"
-	"github.com/stellar/go/keypair"
-	"github.com/stretchr/testify/require"
 )
 
 func TestBlockConfirmedOrdering(t *testing.T) {
@@ -138,31 +139,21 @@ func TestMakeGenesisBlock(t *testing.T) {
 
 	bt, err := GetBlockTransaction(st, bk.Transactions[0])
 	require.NoError(t, err)
+	require.NoError(t, err)
 
 	genesisBlockKP := keypair.Master(string(networkID))
-	require.Equal(t, genesisAccount.SequenceID, bt.SequenceID)
-	require.Equal(t, common.Amount(0), bt.Fee)
-	require.Equal(t, 2, len(bt.Operations))
-	require.Equal(t, genesisBlockKP.Address(), bt.Source)
+	require.Equal(t, genesisAccount.SequenceID, bt.Transaction().B.SequenceID)
+	require.Equal(t, common.Amount(0), bt.Transaction().B.Fee)
+	require.Equal(t, 2, len(bt.Transaction().B.Operations))
+	require.Equal(t, genesisBlockKP.Address(), bt.Transaction().Source())
 	require.Equal(t, bk.Hash, bt.Block)
 
 	// operation
-	{
-		exists, err := ExistsBlockOperation(st, bt.Operations[0])
-		require.NoError(t, err)
-		require.True(t, exists)
-	}
-	bo, err := GetBlockOperation(st, bt.Operations[0])
-	require.NoError(t, err)
-	require.Equal(t, bt.Hash, bo.TxHash)
-	require.Equal(t, operation.TypeCreateAccount, bo.Type)
-	require.Equal(t, genesisBlockKP.Address(), bo.Source)
+	bo := bt.Transaction().B.Operations[0]
+	require.Equal(t, operation.TypeCreateAccount, bo.H.Type)
 
 	{
-		opb, err := operation.UnmarshalBodyJSON(bo.Type, bo.Body)
-		require.NoError(t, err)
-
-		opbp := opb.(operation.Payable)
+		opbp := bo.B.(operation.Payable)
 
 		require.Equal(t, genesisAccount.Address, opbp.TargetAddress())
 		require.Equal(t, genesisAccount.Balance, opbp.GetAmount())
@@ -231,12 +222,8 @@ func TestMakeGenesisBlockFindGenesisAccount(t *testing.T) {
 	{ // with `Operation`
 		bk := GetGenesis(st)
 		bt, _ := GetBlockTransaction(st, bk.Transactions[0])
-		bo, _ := GetBlockOperation(st, bt.Operations[0])
 
-		opb, err := operation.UnmarshalBodyJSON(bo.Type, bo.Body)
-		require.NoError(t, err)
-
-		opbp := opb.(operation.Payable)
+		opbp := bt.Transaction().B.Operations[0].B.(operation.Payable)
 
 		genesisAccount, err := GetBlockAccount(st, opbp.TargetAddress())
 		require.NoError(t, err)
@@ -271,12 +258,8 @@ func TestMakeGenesisBlockFindCommonAccount(t *testing.T) {
 	{ // with `Operation`
 		bk := GetGenesis(st)
 		bt, _ := GetBlockTransaction(st, bk.Transactions[0])
-		bo, _ := GetBlockOperation(st, bt.Operations[1])
 
-		opb, err := operation.UnmarshalBodyJSON(bo.Type, bo.Body)
-		require.NoError(t, err)
-
-		opbp := opb.(operation.Payable)
+		opbp := bt.Transaction().B.Operations[1].B.(operation.Payable)
 
 		ac, err := GetBlockAccount(st, opbp.TargetAddress())
 		require.NoError(t, err)

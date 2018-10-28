@@ -1,17 +1,8 @@
 package block
 
-import (
-	"encoding/json"
-	"fmt"
+import "fmt"
 
-	"boscoin.io/sebak/lib/common"
-	"boscoin.io/sebak/lib/common/observer"
-	"boscoin.io/sebak/lib/error"
-	"boscoin.io/sebak/lib/storage"
-	"boscoin.io/sebak/lib/transaction"
-	"boscoin.io/sebak/lib/transaction/operation"
-)
-
+/*
 // BlockOperation is `Operation` data for block. the storage should support,
 //  * find by `Hash`
 //  * find by `TxHash`
@@ -34,11 +25,13 @@ type BlockOperation struct {
 	transaction transaction.Transaction
 	isSaved     bool
 }
+*/
 
 func NewBlockOperationKey(opHash, txHash string) string {
 	return fmt.Sprintf("%s-%s", opHash, txHash)
 }
 
+/*
 func NewBlockOperationFromOperation(op operation.Operation, tx transaction.Transaction, blockHeight uint64) (BlockOperation, error) {
 	body, err := op.B.Serialize()
 	if err != nil {
@@ -198,3 +191,4 @@ func GetBlockOperationsBySource(st *storage.LevelDBBackend, source string, optio
 
 	return LoadBlockOperationsInsideIterator(st, iterFunc, closeFunc)
 }
+*/

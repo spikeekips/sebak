@@ -9,6 +9,7 @@ import (
 	"boscoin.io/sebak/lib/error"
 	"boscoin.io/sebak/lib/storage"
 	"boscoin.io/sebak/lib/transaction"
+	"boscoin.io/sebak/lib/transaction/operation"
 )
 
 // BlockTransaction is `Transaction` data for block. the storage should support,
@@ -26,54 +27,48 @@ type BlockTransaction struct {
 	Hash  string `json:"hash"`
 	Block string/* `Block.Hash` */ `json:"block"`
 
-	SequenceID uint64        `json:"sequence_id"`
-	Signature  string        `json:"signature"`
-	Source     string        `json:"source"`
-	Fee        common.Amount `json:"fee"`
-	Operations []string      `json:"operations"`
-	Amount     common.Amount `json:"amount"`
-
-	Confirmed string `json:"confirmed"`
-	Created   string `json:"created"`
-	Message   []byte `json:"message"`
+	Message []byte `json:"message"`
 
 	transaction transaction.Transaction
 	isSaved     bool
+	confirmed   string
 	blockHeight uint64
 }
 
 func NewBlockTransactionFromTransaction(blockHash string, blockHeight uint64, confirmed string, tx transaction.Transaction, message []byte) BlockTransaction {
-	var opHashes []string
-	for _, op := range tx.B.Operations {
-		opHashes = append(opHashes, NewBlockOperationKey(op.MakeHashString(), tx.GetHash()))
-	}
+	/*
+		var opHashes []string
+		for _, op := range tx.B.Operations {
+			opHashes = append(opHashes, NewBlockOperationKey(op.MakeHashString(), tx.GetHash()))
+		}
+	*/
 
 	return BlockTransaction{
-		Hash:       tx.H.Hash,
-		Block:      blockHash,
-		SequenceID: tx.B.SequenceID,
-		Signature:  tx.H.Signature,
-		Source:     tx.B.Source,
-		Fee:        tx.B.Fee,
-		Operations: opHashes,
-		Amount:     tx.TotalAmount(true),
-
-		Confirmed: confirmed,
-		Created:   tx.H.Created,
-		Message:   message,
-
+		Hash:        tx.H.Hash,
+		Block:       blockHash,
+		Message:     message,
 		transaction: tx,
-
 		blockHeight: blockHeight,
+		confirmed:   confirmed,
 	}
+}
+
+func (bt *BlockTransaction) LoadTransaction() (err error) {
+	var tx transaction.Transaction
+	if err = common.DecodeJSONValue(bt.Message, &tx); err != nil {
+		return
+	}
+
+	bt.transaction = tx
+	return
 }
 
 func (bt BlockTransaction) NewBlockTransactionKeySource() string {
 	return fmt.Sprintf(
 		"%s%s%s%s",
-		GetBlockTransactionKeyPrefixSource(bt.Source),
+		GetBlockTransactionKeyPrefixSource(bt.transaction.Source()),
 		common.EncodeUint64ToByteSlice(bt.blockHeight),
-		common.EncodeUint64ToByteSlice(bt.SequenceID),
+		common.EncodeUint64ToByteSlice(bt.transaction.B.SequenceID),
 		common.GetUniqueIDFromUUID(),
 	)
 }
@@ -81,7 +76,7 @@ func (bt BlockTransaction) NewBlockTransactionKeySource() string {
 func (bt BlockTransaction) NewBlockTransactionKeyConfirmed() string {
 	return fmt.Sprintf(
 		"%s%s",
-		GetBlockTransactionKeyPrefixConfirmed(bt.Confirmed),
+		GetBlockTransactionKeyPrefixConfirmed(bt.confirmed),
 		common.GetUniqueIDFromUUID(),
 	)
 }
@@ -91,7 +86,7 @@ func (bt BlockTransaction) NewBlockTransactionKeyByAccount(accountAddress string
 		"%s%s%s%s",
 		GetBlockTransactionKeyPrefixAccount(accountAddress),
 		common.EncodeUint64ToByteSlice(bt.blockHeight),
-		common.EncodeUint64ToByteSlice(bt.SequenceID),
+		common.EncodeUint64ToByteSlice(bt.transaction.B.SequenceID),
 		common.GetUniqueIDFromUUID(),
 	)
 }
@@ -101,7 +96,7 @@ func (bt BlockTransaction) NewBlockTransactionKeyByBlock(hash string) string {
 		"%s%s%s%s",
 		GetBlockTransactionKeyPrefixBlock(hash),
 		common.EncodeUint64ToByteSlice(bt.blockHeight),
-		common.EncodeUint64ToByteSlice(bt.SequenceID),
+		common.EncodeUint64ToByteSlice(bt.transaction.B.SequenceID),
 		common.GetUniqueIDFromUUID(),
 	)
 }
@@ -130,15 +125,24 @@ func (bt *BlockTransaction) Save(st *storage.LevelDBBackend) (err error) {
 	if err = st.New(bt.NewBlockTransactionKeyConfirmed(), bt.Hash); err != nil {
 		return
 	}
-	if err = st.New(bt.NewBlockTransactionKeyByAccount(bt.Source), bt.Hash); err != nil {
+	if err = st.New(bt.NewBlockTransactionKeyByAccount(bt.transaction.Source()), bt.Hash); err != nil {
 		return
 	}
 	if err = st.New(bt.NewBlockTransactionKeyByBlock(bt.Block), bt.Hash); err != nil {
 		return
 	}
 
+	for _, op := range bt.transaction.B.Operations {
+		if pop, ok := op.B.(operation.Payable); ok {
+			err = st.New(bt.NewBlockTransactionKeyByAccount(pop.TargetAddress()), bt.Hash)
+			if err != nil {
+				return
+			}
+		}
+	}
+
 	event := "saved"
-	event += " " + fmt.Sprintf("source-%s", bt.Source)
+	event += " " + fmt.Sprintf("source-%s", bt.transaction.Source())
 	event += " " + fmt.Sprintf("hash-%s", bt.Hash)
 	observer.BlockTransactionObserver.Trigger(event, bt)
 	bt.isSaved = true
@@ -160,7 +164,14 @@ func (bt BlockTransaction) String() string {
 	return string(encoded)
 }
 
-func (bt BlockTransaction) Transaction() transaction.Transaction {
+func (bt *BlockTransaction) Transaction() (tx transaction.Transaction) {
+	if bt.transaction.IsEmpty() {
+		var err error
+		if err = bt.LoadTransaction(); err != nil {
+			return
+		}
+	}
+
 	return bt.transaction
 }
 
