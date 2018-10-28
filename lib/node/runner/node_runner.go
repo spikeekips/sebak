@@ -12,6 +12,10 @@ import (
 	"net/http/pprof"
 	"time"
 
+	ghandlers "github.com/gorilla/handlers"
+	logging "github.com/inconshreveable/log15"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"boscoin.io/sebak/lib/ballot"
 	"boscoin.io/sebak/lib/block"
 	"boscoin.io/sebak/lib/common"
@@ -23,9 +27,6 @@ import (
 	"boscoin.io/sebak/lib/storage"
 	"boscoin.io/sebak/lib/transaction"
 	"boscoin.io/sebak/lib/voting"
-	ghandlers "github.com/gorilla/handlers"
-	logging "github.com/inconshreveable/log15"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var DefaultHandleBaseBallotCheckerFuncs = []common.CheckerFunc{
@@ -87,8 +88,9 @@ type NodeRunner struct {
 	CommonAccountAddress string
 	InitialBalance       common.Amount
 
-	Conf     common.Config
-	nodeInfo node.NodeInfo
+	Conf                  common.Config
+	nodeInfo              node.NodeInfo
+	savingBlockOperations *SavingBlockOperations
 }
 
 func NewNodeRunner(
@@ -119,6 +121,15 @@ func NewNodeRunner(
 
 	nr.connectionManager = c.ConnectionManager()
 	nr.network.AddWatcher(nr.connectionManager.ConnectionWatcher)
+	nr.savingBlockOperations = NewSavingBlockOperations(
+		nr.Storage(),
+		nr.Log(),
+	)
+
+	if err = nr.savingBlockOperations.Check(); err != nil {
+		nr.log.Error("failed to check BlockOperations", "error", err)
+		return
+	}
 
 	nr.SetHandleBaseBallotCheckerFuncs(DefaultHandleBaseBallotCheckerFuncs...)
 	nr.SetHandleINITBallotCheckerFuncs(DefaultHandleINITBallotCheckerFuncs...)
@@ -287,6 +298,7 @@ func (nr *NodeRunner) Start() (err error) {
 	go nr.handleMessages()
 	go nr.ConnectValidators()
 	go nr.InitRound()
+	go nr.savingBlockOperations.Start()
 
 	if err = nr.network.Start(); err != nil {
 		return
@@ -330,6 +342,10 @@ func (nr *NodeRunner) Policy() voting.ThresholdPolicy {
 
 func (nr *NodeRunner) Log() logging.Logger {
 	return nr.log
+}
+
+func (nr *NodeRunner) SavingBlockOperations() *SavingBlockOperations {
+	return nr.savingBlockOperations
 }
 
 func (nr *NodeRunner) ISAACStateManager() *ISAACStateManager {
