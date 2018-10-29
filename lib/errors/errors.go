@@ -87,4 +87,5 @@ var (
 	HTTPServerError                           = NewError(173, "Internal Server Error")
 	BlockTransactionHistoryDoesNotExists      = NewError(174, "transaction history does not exists in block")
 	NotCommittable                            = NewError(175, "not Committable")
+	AlreadyCommittable                        = NewError(176, "already Committable")
 )
