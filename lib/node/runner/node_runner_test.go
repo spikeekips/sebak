@@ -54,7 +54,7 @@ func createTestNodeRunner(n int, conf common.Config) []*NodeRunner {
 		localNode := nodes[i]
 		policy, _ := consensus.NewDefaultVotingThresholdPolicy(66)
 
-		connectionManager := network.NewValidatorConnectionManager(localNode, ns[i], policy, conf)
+		connectionManager := network.NewValidatorConnectionManager(localNode, ns[i], policy, conf, nil)
 
 		st := block.InitTestBlockchain()
 		is, _ := consensus.NewISAAC(localNode, policy, connectionManager, st, conf, nil)

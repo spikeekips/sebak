@@ -26,6 +26,7 @@ func TestParseFlagSelfValidators(t *testing.T) {
 	flagValidators = "https://localhost:12346?address=GDPQ2LBYP3RL3O675H2N5IEYM6PRJNUA5QFMKXIHGTKEB5KS5T3KHFA2"
 	flagKPSecretSeed = "SCN4NSV5SVHIZWUDJFT4Z5FFVHO3TFRTOIBQLHMNPAZJ37K5A2YFSCBM"
 	flagBindURL = "http://0.0.0.0:12345"
+	flagConnect = cmdcommon.ListFlags{"http://127.0.0.1:12345"}
 
 	parseFlagsNode()
 	require.Equal(t, 2, len(localNode.GetValidators()))

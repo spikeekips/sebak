@@ -29,6 +29,7 @@ type ValidatorConnectionManager struct {
 	cm                 ConnectMessage
 	receiveConnectChan chan ConnectMessage
 	config             common.Config
+	endpoints          []*common.Endpoint
 
 	log     logging.Logger
 	isReady bool
@@ -39,6 +40,7 @@ func NewValidatorConnectionManager(
 	network Network,
 	policy voting.ThresholdPolicy,
 	config common.Config,
+	endpoints ...*common.Endpoint,
 ) ConnectionManager {
 	if len(localNode.GetValidators()) == 0 {
 		panic("empty validators")
@@ -63,6 +65,7 @@ func NewValidatorConnectionManager(
 		connected:          map[string]bool{},
 		receiveConnectChan: make(chan ConnectMessage, 100),
 		config:             config,
+		endpoints:          endpoints,
 		log:                log.New(logging.Ctx{"node": localNode.Alias()}),
 		cm:                 cm,
 	}
@@ -342,23 +345,7 @@ func (c *ValidatorConnectionManager) startConnect() {
 		case <-ctx.Done():
 			goto end
 		default:
-			var knowns []string
-			for _, v := range c.localNode.GetValidators() {
-				if v.Address() == c.localNode.Address() {
-					continue
-				}
-
-				if v.Endpoint() == nil {
-					continue
-				}
-
-				knowns = append(knowns, v.Address())
-			}
-
-			for _, address := range knowns {
-				go c.sendConnectMessage(c.cm, address)
-			}
-
+			c.sendConnectMessages()
 			time.Sleep(time.Second * 1)
 		}
 	}
@@ -371,19 +358,36 @@ end:
 	)
 }
 
-func (c *ValidatorConnectionManager) sendConnectMessage(cm ConnectMessage, address string) (err error) {
-	connected := c.localNode.Validator(address)
-	if connected == nil {
-		err = fmt.Errorf("unknown validator")
-		c.log.Error(err.Error(), "validator", address)
-		return
+func (c *ValidatorConnectionManager) sendConnectMessages() {
+	for _, v := range c.localNode.GetValidators() {
+		if v.Address() == c.localNode.Address() {
+			continue
+		}
+
+		if v.Endpoint() == nil {
+			continue
+		}
+
+		var found bool
+		for _, endpoint := range c.endpoints {
+			if endpoint.Equal(v.Endpoint()) {
+				found = true
+				break
+			}
+		}
+		if found {
+			continue
+		}
+
+		c.endpoints = append(c.endpoints, v.Endpoint())
 	}
 
-	endpoint := connected.Endpoint()
-	if endpoint == nil {
-		return
+	for _, endpoint := range c.endpoints {
+		go c.sendConnectMessage(c.cm, endpoint)
 	}
+}
 
+func (c *ValidatorConnectionManager) sendConnectMessage(cm ConnectMessage, endpoint *common.Endpoint) (err error) {
 	client := c.getConnectionByEndpoint(endpoint)
 	if client == nil {
 		err = fmt.Errorf("failed to get client")
@@ -483,14 +487,7 @@ func (c *ValidatorConnectionManager) receivedConnect(done context.CancelFunc, cm
 		"after", c.getValidators(),
 	)
 
-	// broadcast new validators to all validators.
-	for address, _ := range c.getValidators() {
-		if address == c.localNode.Address() {
-			continue
-		}
-
-		go c.sendConnectMessage(c.cm, address)
-	}
+	c.sendConnectMessages()
 
 	if len(c.getValidators()) >= c.policy.Threshold() {
 		done()

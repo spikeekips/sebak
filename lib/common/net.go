@@ -126,14 +126,43 @@ func (e *Endpoint) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, u)
 }
 
+func IsLocalhost(s string) bool {
+	return s == "localhost" || strings.HasPrefix(s, "127.0.")
+}
+
+func normalizeURLPath(s string) string {
+	if len(s) < 1 {
+		return ""
+	}
+	if s == "/" {
+		return ""
+	}
+
+	return s
+}
+
 func (e *Endpoint) Equal(n *Endpoint) bool {
 	if e.Scheme != n.Scheme {
 		return false
 	}
 	if e.Host != n.Host {
-		return false
+		ehost, eport, err := net.SplitHostPort(e.Host)
+		if err != nil {
+			return false
+		}
+		nhost, nport, err := net.SplitHostPort(n.Host)
+		if err != nil {
+			return false
+		}
+		if eport != nport {
+			return false
+		}
+
+		if !IsLocalhost(ehost) || !IsLocalhost(nhost) {
+			return false
+		}
 	}
-	if e.Path != n.Path {
+	if normalizeURLPath(e.Path) != normalizeURLPath(n.Path) {
 		return false
 	}
 

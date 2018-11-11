@@ -91,7 +91,7 @@ func createNewHTTP2Network(t *testing.T) (kp *keypair.Full, n *network.HTTP2Netw
 
 	p, _ := consensus.NewDefaultVotingThresholdPolicy(30)
 
-	connectionManager := network.NewValidatorConnectionManager(localNode, n, p, conf)
+	connectionManager := network.NewValidatorConnectionManager(localNode, n, p, conf, nil)
 
 	st := block.InitTestBlockchain()
 	is, _ := consensus.NewISAAC(localNode, p, connectionManager, st, conf, nil)

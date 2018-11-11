@@ -35,31 +35,32 @@ const (
 )
 
 var (
-	flagBindURL           string = common.GetENVValue("SEBAK_BIND", defaultBindURL)
-	flagBlockTime         string = common.GetENVValue("SEBAK_BLOCK_TIME", "5")
-	flagDebugPProf        bool   = common.GetENVValue("SEBAK_DEBUG_PPROF", "0") == "1"
-	flagKPSecretSeed      string = common.GetENVValue("SEBAK_SECRET_SEED", "")
-	flagLog               string = common.GetENVValue("SEBAK_LOG", "")
-	flagLogLevel          string = common.GetENVValue("SEBAK_LOG_LEVEL", defaultLogLevel.String())
-	flagLogFormat         string = common.GetENVValue("SEBAK_LOG_FORMAT", defaultLogFormat)
-	flagNetworkID         string = common.GetENVValue("SEBAK_NETWORK_ID", "")
-	flagOperationsLimit   string = common.GetENVValue("SEBAK_OPERATIONS_LIMIT", "1000")
-	flagPublishURL        string = common.GetENVValue("SEBAK_PUBLISH", "")
-	flagSyncCheckInterval string = common.GetENVValue("SEBAK_SYNC_CHECK_INTERVAL", "30s")
-	flagSyncFetchTimeout  string = common.GetENVValue("SEBAK_SYNC_FETCH_TIMEOUT", "1m")
-	flagSyncPoolSize      string = common.GetENVValue("SEBAK_SYNC_POOL_SIZE", "300")
-	flagSyncRetryInterval string = common.GetENVValue("SEBAK_SYNC_RETRY_INTERVAL", "10s")
-	flagThreshold         string = common.GetENVValue("SEBAK_THRESHOLD", "67")
-	flagTimeoutACCEPT     string = common.GetENVValue("SEBAK_TIMEOUT_ACCEPT", "2")
-	flagTimeoutALLCONFIRM string = common.GetENVValue("SEBAK_TIMEOUT_ALLCONFIRM", "30")
-	flagTimeoutINIT       string = common.GetENVValue("SEBAK_TIMEOUT_INIT", "2")
-	flagTimeoutSIGN       string = common.GetENVValue("SEBAK_TIMEOUT_SIGN", "2")
-	flagTLSCertFile       string = common.GetENVValue("SEBAK_TLS_CERT", "sebak.crt")
-	flagTLSKeyFile        string = common.GetENVValue("SEBAK_TLS_KEY", "sebak.key")
-	flagTransactionsLimit string = common.GetENVValue("SEBAK_TRANSACTIONS_LIMIT", "1000")
-	flagUnfreezingPeriod  string = common.GetENVValue("SEBAK_UNFREEZING_PERIOD", "241920")
-	flagValidators        string = common.GetENVValue("SEBAK_VALIDATORS", "")
-	flagVerbose           bool   = common.GetENVValue("SEBAK_VERBOSE", "0") == "1"
+	flagBindURL           string              = common.GetENVValue("SEBAK_BIND", defaultBindURL)
+	flagBlockTime         string              = common.GetENVValue("SEBAK_BLOCK_TIME", "5")
+	flagDebugPProf        bool                = common.GetENVValue("SEBAK_DEBUG_PPROF", "0") == "1"
+	flagKPSecretSeed      string              = common.GetENVValue("SEBAK_SECRET_SEED", "")
+	flagLog               string              = common.GetENVValue("SEBAK_LOG", "")
+	flagLogLevel          string              = common.GetENVValue("SEBAK_LOG_LEVEL", defaultLogLevel.String())
+	flagLogFormat         string              = common.GetENVValue("SEBAK_LOG_FORMAT", defaultLogFormat)
+	flagNetworkID         string              = common.GetENVValue("SEBAK_NETWORK_ID", "")
+	flagOperationsLimit   string              = common.GetENVValue("SEBAK_OPERATIONS_LIMIT", "1000")
+	flagPublishURL        string              = common.GetENVValue("SEBAK_PUBLISH", "")
+	flagSyncCheckInterval string              = common.GetENVValue("SEBAK_SYNC_CHECK_INTERVAL", "30s")
+	flagSyncFetchTimeout  string              = common.GetENVValue("SEBAK_SYNC_FETCH_TIMEOUT", "1m")
+	flagSyncPoolSize      string              = common.GetENVValue("SEBAK_SYNC_POOL_SIZE", "300")
+	flagSyncRetryInterval string              = common.GetENVValue("SEBAK_SYNC_RETRY_INTERVAL", "10s")
+	flagThreshold         string              = common.GetENVValue("SEBAK_THRESHOLD", "67")
+	flagTimeoutACCEPT     string              = common.GetENVValue("SEBAK_TIMEOUT_ACCEPT", "2")
+	flagTimeoutALLCONFIRM string              = common.GetENVValue("SEBAK_TIMEOUT_ALLCONFIRM", "30")
+	flagTimeoutINIT       string              = common.GetENVValue("SEBAK_TIMEOUT_INIT", "2")
+	flagTimeoutSIGN       string              = common.GetENVValue("SEBAK_TIMEOUT_SIGN", "2")
+	flagTLSCertFile       string              = common.GetENVValue("SEBAK_TLS_CERT", "sebak.crt")
+	flagTLSKeyFile        string              = common.GetENVValue("SEBAK_TLS_KEY", "sebak.key")
+	flagTransactionsLimit string              = common.GetENVValue("SEBAK_TRANSACTIONS_LIMIT", "1000")
+	flagUnfreezingPeriod  string              = common.GetENVValue("SEBAK_UNFREEZING_PERIOD", "241920")
+	flagValidators        string              = common.GetENVValue("SEBAK_VALIDATORS", "")
+	flagVerbose           bool                = common.GetENVValue("SEBAK_VERBOSE", "0") == "1"
+	flagConnect           cmdcommon.ListFlags // "SEBAK_CONNECT"
 
 	flagRateLimitAPI        cmdcommon.ListFlags // "SEBAK_RATE_LIMIT_API"
 	flagRateLimitNode       cmdcommon.ListFlags // "SEBAK_RATE_LIMIT_NODE"
@@ -89,6 +90,7 @@ var (
 	timeoutSIGN       time.Duration
 	transactionsLimit uint64
 	validators        []*node.Validator
+	connectEndpoints  []*common.Endpoint
 
 	logLevel logging.Lvl
 	log      logging.Logger = logging.New("module", "main")
@@ -180,6 +182,11 @@ func init() {
 	nodeCmd.Flags().StringVar(&flagSyncFetchTimeout, "sync-fetch-timeout", flagSyncFetchTimeout, "sync fetch timeout")
 	nodeCmd.Flags().StringVar(&flagSyncRetryInterval, "sync-retry-interval", flagSyncRetryInterval, "sync retry interval")
 	nodeCmd.Flags().StringVar(&flagSyncCheckInterval, "sync-check-interval", flagSyncCheckInterval, "sync check interval")
+	nodeCmd.Flags().Var(
+		&flagConnect,
+		"connect",
+		"initial endpoint for discovery",
+	)
 
 	rootCmd.AddCommand(nodeCmd)
 }
@@ -250,6 +257,35 @@ func parseFlagValidators(v string) (vs []*node.Validator, err error) {
 			return
 		}
 		vs = append(vs, validator)
+	}
+
+	return
+}
+
+func parseFlagConnect(l cmdcommon.ListFlags) (endpoints []*common.Endpoint, err error) {
+	if len(l) < 1 {
+		err = fmt.Errorf("must be given one more")
+		return
+	}
+
+	var endpoint *common.Endpoint
+	for _, s := range l {
+		if endpoint, err = common.NewEndpointFromString(s); err != nil {
+			return
+		}
+
+		var found bool
+		for _, e := range endpoints {
+			if endpoint.Equal(e) {
+				found = true
+				break
+			}
+		}
+		if found {
+			continue
+		}
+
+		endpoints = append(endpoints, endpoint)
 	}
 
 	return
@@ -384,6 +420,30 @@ func parseFlagsNode() {
 	network.SetLogging(logLevel, logHandler)
 	sync.SetLogging(logLevel, logHandler)
 
+	if len(flagConnect) < 1 {
+		l := strings.Fields(common.GetENVValue("SEBAK_CONNECT", ""))
+		for _, i := range l {
+			flagConnect.Set(i)
+		}
+	}
+
+	var endpoints []*common.Endpoint
+	if endpoints, err = parseFlagConnect(flagConnect); err != nil {
+		cmdcommon.PrintFlagsError(nodeCmd, "--connect", err)
+	}
+	for _, endpoint := range endpoints {
+		if endpoint.Equal(publishEndpoint) {
+			log.Warn(
+				"--connect is same with --publish",
+				"--connect", endpoint.String(),
+				"--publish", publishEndpoint.String(),
+			)
+			continue
+		}
+
+		connectEndpoints = append(connectEndpoints, endpoint)
+	}
+
 	if len(flagRateLimitAPI) < 1 {
 		re := strings.Fields(common.GetENVValue("SEBAK_RATE_LIMIT_API", ""))
 		for _, r := range re {
@@ -430,6 +490,7 @@ func parseFlagsNode() {
 	parsedFlags = append(parsedFlags, "\n\toperations-limit", flagOperationsLimit)
 	parsedFlags = append(parsedFlags, "\n\trate-limit-api", rateLimitRuleAPI)
 	parsedFlags = append(parsedFlags, "\n\trate-limit-node", rateLimitRuleNode)
+	parsedFlags = append(parsedFlags, "\n\tconnect", connectEndpoints)
 
 	// create current Node
 	localNode, err = node.NewLocalNode(kp, bindEndpoint, "")
@@ -513,7 +574,7 @@ func runNode() error {
 		RateLimitRuleNode: rateLimitRuleNode,
 	}
 
-	connectionManager := network.NewValidatorConnectionManager(localNode, nt, policy, conf)
+	connectionManager := network.NewValidatorConnectionManager(localNode, nt, policy, conf, connectEndpoints...)
 
 	st, err := storage.NewStorage(storageConfig)
 	if err != nil {

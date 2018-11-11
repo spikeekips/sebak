@@ -30,6 +30,7 @@ func MakeNodeRunner() (*NodeRunner, *node.LocalNode) {
 		n,
 		policy,
 		conf,
+		nil,
 	)
 
 	st := block.InitTestBlockchain()
