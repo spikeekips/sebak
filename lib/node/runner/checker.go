@@ -146,7 +146,7 @@ func BallotValidateOperationBodyInflation(c common.Checker, args ...interface{})
 // is from the known validators.
 func BallotNotFromKnownValidators(c common.Checker, args ...interface{}) (err error) {
 	checker := c.(*BallotChecker)
-	if checker.LocalNode.HasValidators(checker.Ballot.Source()) {
+	if checker.LocalNode.HasValidator(checker.Ballot.Source()) {
 		return
 	}
 

@@ -1,13 +1,8 @@
 package runner
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 	"unicode"
@@ -17,7 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 
 	"boscoin.io/sebak/lib/block"
@@ -26,7 +20,6 @@ import (
 	"boscoin.io/sebak/lib/consensus"
 	"boscoin.io/sebak/lib/network"
 	"boscoin.io/sebak/lib/node"
-	"boscoin.io/sebak/lib/storage"
 )
 
 func getPort() string {
@@ -98,11 +91,7 @@ func createNewHTTP2Network(t *testing.T) (kp *keypair.Full, n *network.HTTP2Netw
 
 	p, _ := consensus.NewDefaultVotingThresholdPolicy(30)
 
-	connectionManager := network.NewValidatorConnectionManager(
-		localNode,
-		n,
-		p,
-	)
+	connectionManager := network.NewValidatorConnectionManager(localNode, n, p, conf)
 
 	st := block.InitTestBlockchain()
 	is, _ := consensus.NewISAAC(localNode, p, connectionManager, st, conf, nil)
@@ -152,17 +141,17 @@ func TestHTTP2NetworkGetNodeInfo(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	v, err := node.NewValidatorFromString(b)
+	v, err := node.NewNodeInfoFromJSON(b)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
 	server := nodeRunner.Node().Endpoint().String()
-	client := v.Endpoint().String()
+	client := v.Node.Endpoint.String()
 
 	require.Equal(t, server, client, "Server endpoint and received endpoint should be the same.")
-	require.Equal(t, nodeRunner.Node().Address(), v.Address(), "Server address and received address should be the same.")
+	require.Equal(t, nodeRunner.Node().Address(), v.Node.Address, "Server address and received address should be the same.")
 }
 
 type StringResponseMessageBroker struct {
@@ -188,12 +177,12 @@ func TestHTTP2NetworkMessageBrokerResponseMessage(t *testing.T) {
 	c0 := s0.GetClient(s0.Endpoint())
 	pingAndWait(t, c0)
 
-	returnMsg, _ := c0.Connect(nodeRunner.Node())
+	returnMsg, _ := c0.SendBallot(nodeRunner.Node())
 
-	require.Equal(t, string(returnMsg), "ResponseMessage", "The connectNode and the return should be the same.")
+	require.Equal(t, "ResponseMessage", string(returnMsg), "The connectNode and the return should be the same.")
 }
 
-func TestHTTP2NetworkConnect(t *testing.T) {
+func TestHTTP2NetworkAlive(t *testing.T) {
 	_, s0, nodeRunner := createNewHTTP2Network(t)
 	s0.SetMessageBroker(&TestMessageBroker{network: s0})
 	nodeRunner.Ready()
@@ -204,85 +193,6 @@ func TestHTTP2NetworkConnect(t *testing.T) {
 	c0 := s0.GetClient(s0.Endpoint())
 	pingAndWait(t, c0)
 
-	o, _ := nodeRunner.Node().Serialize()
-	nodeStr := removeWhiteSpaces(string(o))
-
-	returnMsg, _ := c0.Connect(nodeRunner.Node())
-	returnStr := removeWhiteSpaces(string(returnMsg))
-
-	require.Equal(t, returnStr, nodeStr, "The connectNode and the return should be the same.")
-}
-
-// TestGetNodeInfoHandler checks `NodeInfoHandler`
-func TestGetNodeInfoHandler(t *testing.T) {
-	st := storage.NewTestStorage()
-	defer st.Close()
-
-	endpoint, _ := common.NewEndpointFromString("http://localhost:12345")
-	localNode, _ := node.NewLocalNode(keypair.Random(), endpoint, "")
-	localNode.AddValidators(localNode.ConvertToValidator())
-	isaac, _ := consensus.NewISAAC(
-		localNode,
-		nil,
-		network.NewValidatorConnectionManager(localNode, nil, nil),
-		st,
-		common.NewTestConfig(),
-		nil,
-	)
-
-	var config *network.HTTP2NetworkConfig
-
-	config, _ = network.NewHTTP2NetworkConfigFromEndpoint(localNode.Alias(), endpoint)
-	nt := network.NewHTTP2Network(config)
-
-	apiHandler := NetworkHandlerNode{storage: st, consensus: isaac, network: nt, localNode: localNode}
-
-	router := mux.NewRouter()
-	router.HandleFunc(NodeInfoHandlerPattern, apiHandler.NodeInfoHandler).Methods("GET")
-
-	server := httptest.NewServer(router)
-	defer server.Close()
-
-	{ // without setting PublishEndpoint, `endpoint` of response should be requested URL
-		u, _ := url.Parse(server.URL)
-		u.Path = NodeInfoHandlerPattern
-
-		req, err := http.NewRequest("GET", u.String(), nil)
-		require.NoError(t, err)
-		resp, err := server.Client().Do(req)
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, _ := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-
-		var received map[string]interface{}
-		err = json.Unmarshal(body, &received)
-		require.NoError(t, err)
-
-		require.Equal(t, server.URL, received["endpoint"])
-	}
-
-	{ // with setting PublishEndpoint, `endpoint` of response should be requested URL
-		publishEndpoint, _ := common.NewEndpointFromString("https://9.9.9.9:54321")
-		localNode.SetPublishEndpoint(publishEndpoint)
-
-		u, _ := url.Parse(server.URL)
-		u.Path = NodeInfoHandlerPattern
-
-		req, err := http.NewRequest("GET", u.String(), nil)
-		require.NoError(t, err)
-		resp, err := server.Client().Do(req)
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, _ := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-
-		var received map[string]interface{}
-		err = json.Unmarshal(body, &received)
-		require.NoError(t, err)
-
-		require.Equal(t, publishEndpoint.String(), received["endpoint"])
-	}
+	err := c0.Alive()
+	require.NoError(t, err)
 }

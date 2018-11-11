@@ -9,7 +9,6 @@ import (
 
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/errors"
-	"boscoin.io/sebak/lib/node"
 	"boscoin.io/sebak/lib/node/runner/api/resource"
 )
 
@@ -60,7 +59,7 @@ func (c *HTTP2NetworkClient) GetNodeInfo() (body []byte, err error) {
 	headers := c.DefaultHeaders()
 	headers.Set("Content-Type", "application/json")
 
-	u := c.resolvePath(UrlPathPrefixNode + "/")
+	u := c.resolvePath("/")
 
 	var response *http.Response
 	response, err = c.client.Get(u.String(), headers)
@@ -71,7 +70,9 @@ func (c *HTTP2NetworkClient) GetNodeInfo() (body []byte, err error) {
 	body, err = ioutil.ReadAll(response.Body)
 
 	if response.StatusCode != http.StatusOK {
-		err = errors.HTTPProblem.Clone().SetData("status", response.StatusCode)
+		err = errors.HTTPProblem.Clone().
+			SetData("status", response.StatusCode).
+			SetData("error", string(body))
 	}
 
 	return
@@ -97,14 +98,21 @@ func (c *HTTP2NetworkClient) Send(path string, message common.Serializable) (ret
 	retBody, err = ioutil.ReadAll(response.Body)
 
 	if response.StatusCode != http.StatusOK {
-		err = errors.HTTPProblem.Clone().SetData("status", response.StatusCode)
+		err = errors.HTTPProblem.Clone().
+			SetData("status", response.StatusCode).
+			SetData("error", string(retBody))
 	}
 
 	return
 }
 
-func (c *HTTP2NetworkClient) Connect(n node.Node) (body []byte, err error) {
-	return c.Send(UrlPathPrefixNode+"/connect", n)
+func (c *HTTP2NetworkClient) Connect(message common.Serializable) (body []byte, err error) {
+	return c.Send(UrlPathPrefixNode+"/connect", message)
+}
+
+func (c *HTTP2NetworkClient) Alive() error {
+	_, err := c.Get(UrlPathPrefixNode)
+	return err
 }
 
 func (c *HTTP2NetworkClient) SendMessage(message common.Serializable) (retBody []byte, err error) {
@@ -139,7 +147,9 @@ func (c *HTTP2NetworkClient) GetTransactions(txs []string) (retBody []byte, err 
 	retBody, err = ioutil.ReadAll(response.Body)
 
 	if response.StatusCode != http.StatusOK {
-		err = errors.HTTPProblem.Clone().SetData("status", response.StatusCode)
+		err = errors.HTTPProblem.Clone().
+			SetData("status", response.StatusCode).
+			SetData("error", string(retBody))
 	}
 
 	return

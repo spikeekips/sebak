@@ -83,6 +83,10 @@ func (v *Validator) Serialize() ([]byte, error) {
 	return json.Marshal(v)
 }
 
+func (v *Validator) SetEndpoint(endpoint *common.Endpoint) {
+	v.endpoint = endpoint
+}
+
 func NewValidator(address string, endpoint *common.Endpoint, alias string) (v *Validator, err error) {
 	if len(alias) < 1 {
 		alias = MakeAlias(address)
@@ -101,7 +105,7 @@ func NewValidator(address string, endpoint *common.Endpoint, alias string) (v *V
 	return
 }
 
-func NewValidatorFromString(b []byte) (*Validator, error) {
+func NewValidatorFromJSON(b []byte) (*Validator, error) {
 	var v Validator
 	if err := json.Unmarshal(b, &v); err != nil {
 		return nil, err
@@ -147,4 +151,16 @@ func NewValidatorFromURI(v string) (validator *Validator, err error) {
 	}
 
 	return
+}
+
+func NewValidatorFromString(v string) (*Validator, error) {
+	if _, err := keypair.Parse(v); err == nil {
+		if validator, err := NewValidator(v, nil, ""); err != nil {
+			return nil, err
+		} else {
+			return validator, nil
+		}
+	}
+
+	return NewValidatorFromURI(v)
 }

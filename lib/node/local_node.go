@@ -91,6 +91,10 @@ func (n *LocalNode) Alias() string {
 }
 
 func (n *LocalNode) Endpoint() *common.Endpoint {
+	if n.publishEndpoint != nil {
+		return n.publishEndpoint
+	}
+
 	return n.bindEndpoint
 }
 
@@ -99,6 +103,10 @@ func (n *LocalNode) BindEndpoint() *common.Endpoint {
 }
 
 func (n *LocalNode) PublishEndpoint() *common.Endpoint {
+	if n.publishEndpoint == nil {
+		return n.Endpoint()
+	}
+
 	return n.publishEndpoint
 }
 
@@ -108,7 +116,7 @@ func (n *LocalNode) SetPublishEndpoint(endpoint *common.Endpoint) {
 	n.AddValidators(n.ConvertToValidator())
 }
 
-func (n *LocalNode) HasValidators(address string) bool {
+func (n *LocalNode) HasValidator(address string) bool {
 	_, found := n.validators[address]
 	return found
 }
@@ -148,6 +156,14 @@ func (n *LocalNode) ConvertToValidator() *Validator {
 		endpoint = n.bindEndpoint
 	}
 	v, _ := NewValidator(n.Address(), endpoint, n.Alias())
+	return v
+}
+
+func (n *LocalNode) Validator(address string) *Validator {
+	n.RLock()
+	defer n.RUnlock()
+
+	v, _ := n.validators[address]
 	return v
 }
 

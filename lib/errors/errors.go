@@ -96,4 +96,6 @@ var (
 	FailedToSaveBlockOperaton                 = NewError(178, "failed to save BlockOperation")
 	NodeNotFound                              = NewError(179, "Node not found")
 	InvalidMessageVersion                     = NewError(180, "message version is invalid")
+	EndpointNotFound                          = NewError(181, "endpoint not found")
+	ConnectFromUnknownValidator               = NewError(182, "connect from unknown validator")
 )

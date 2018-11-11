@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"boscoin.io/sebak/lib/block"
 	"boscoin.io/sebak/lib/common"
@@ -19,31 +18,33 @@ import (
 )
 
 const (
-	NodeInfoHandlerPattern string = "/"
-	ConnectHandlerPattern  string = "/connect"
-	MessageHandlerPattern  string = "/message"
-	BallotHandlerPattern   string = "/ballot"
+	AliveHandlerPattern   string = ""
+	ConnectHandlerPattern string = "/connect"
+	MessageHandlerPattern string = "/message"
+	BallotHandlerPattern  string = "/ballot"
 )
 
 type NetworkHandlerNode struct {
-	localNode       *node.LocalNode
-	network         network.Network
-	storage         *storage.LevelDBBackend
-	consensus       *consensus.ISAAC
-	transactionPool *transaction.Pool
-	urlPrefix       string
-	conf            common.Config
+	localNode         *node.LocalNode
+	network           network.Network
+	storage           *storage.LevelDBBackend
+	consensus         *consensus.ISAAC
+	transactionPool   *transaction.Pool
+	urlPrefix         string
+	conf              common.Config
+	connectionManager network.ConnectionManager
 }
 
-func NewNetworkHandlerNode(localNode *node.LocalNode, network network.Network, storage *storage.LevelDBBackend, consensus *consensus.ISAAC, transactionPool *transaction.Pool, urlPrefix string, conf common.Config) *NetworkHandlerNode {
+func NewNetworkHandlerNode(localNode *node.LocalNode, network network.Network, storage *storage.LevelDBBackend, consensus *consensus.ISAAC, transactionPool *transaction.Pool, urlPrefix string, conf common.Config, connectionManager network.ConnectionManager) *NetworkHandlerNode {
 	return &NetworkHandlerNode{
-		localNode:       localNode,
-		network:         network,
-		storage:         storage,
-		consensus:       consensus,
-		transactionPool: transactionPool,
-		urlPrefix:       urlPrefix,
-		conf:            conf,
+		localNode:         localNode,
+		network:           network,
+		storage:           storage,
+		consensus:         consensus,
+		transactionPool:   transactionPool,
+		urlPrefix:         urlPrefix,
+		conf:              conf,
+		connectionManager: connectionManager,
 	}
 }
 
@@ -65,32 +66,7 @@ func (api NetworkHandlerNode) writeNodeItem(w http.ResponseWriter, itemType Node
 	w.Write(append([]byte(itemType+" "), append(s, '\n')...))
 }
 
-func (api NetworkHandlerNode) NodeInfoHandler(w http.ResponseWriter, r *http.Request) {
-	b, err := NodeInfoWithRequest(api.localNode, r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	api.network.MessageBroker().Response(w, b)
-}
-
-func (api NetworkHandlerNode) ConnectHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Error reading request body", http.StatusInternalServerError)
-		return
-	}
-
-	api.network.MessageBroker().Receive(common.NetworkMessage{Type: common.ConnectMessage, Data: body})
-
-	b, err := NodeInfoWithRequest(api.localNode, r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	api.network.MessageBroker().Response(w, b)
+func (api NetworkHandlerNode) AliveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 var HandleTransactionCheckerFuncs = []common.CheckerFunc{
@@ -157,11 +133,6 @@ func (api NetworkHandlerNode) MessageHandler(w http.ResponseWriter, r *http.Requ
 func (api NetworkHandlerNode) BallotHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	if ct := r.Header.Get("Content-Type"); strings.ToLower(ct) != "application/json" {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
@@ -171,28 +142,5 @@ func (api NetworkHandlerNode) BallotHandler(w http.ResponseWriter, r *http.Reque
 	api.network.MessageBroker().Receive(common.NetworkMessage{Type: common.BallotMessage, Data: body})
 	api.network.MessageBroker().Response(w, body)
 
-	return
-}
-
-func NodeInfoWithRequest(localNode *node.LocalNode, r *http.Request) (b []byte, err error) {
-	var endpoint string
-	if localNode.PublishEndpoint() != nil {
-		endpoint = localNode.PublishEndpoint().String()
-	} else {
-		rUrl := common.RequestURLFromRequest(r)
-		rUrl.Path = ""
-		rUrl.RawQuery = ""
-		endpoint = rUrl.String()
-	}
-
-	info := map[string]interface{}{
-		"address":    localNode.Address(),
-		"alias":      localNode.Alias(),
-		"endpoint":   endpoint,
-		"state":      localNode.State().String(),
-		"validators": localNode.GetValidators(),
-	}
-
-	b, err = json.Marshal(info)
 	return
 }

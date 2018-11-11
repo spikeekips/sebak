@@ -24,6 +24,9 @@ func (m *mockConnectionManager) GetNodeAddress() string {
 func (m *mockConnectionManager) ConnectionWatcher(network.Network, net.Conn, http.ConnState) {}
 func (m *mockConnectionManager) Broadcast(common.Message)                                    {}
 func (m *mockConnectionManager) Start()                                                      {}
+func (m *mockConnectionManager) IsReady() bool {
+	return true
+}
 
 func (m *mockConnectionManager) GetConnection(string) network.NetworkClient {
 	return nil
@@ -44,6 +47,8 @@ func (m *mockConnectionManager) CountConnected() int {
 func (m *mockConnectionManager) GetNode(addr string) node.Node {
 	return m.getNodeFunc(addr)
 }
+
+func (m *mockConnectionManager) ReceiveConnect(network.ConnectMessage) {}
 
 type mockDoer struct {
 	handleFunc func(*http.Request) (*http.Response, error)

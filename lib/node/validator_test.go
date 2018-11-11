@@ -92,7 +92,7 @@ func TestValidatorMarshalJSON(t *testing.T) {
 }
 
 func TestValidatorNewValidatorFromString(t *testing.T) {
-	validator, _ := NewValidatorFromString([]byte(
+	validator, _ := NewValidatorFromJSON([]byte(
 		`{
 			"address":"GATCSN5N6WST3GIJNOF3P55KZTBXG6KUSEFZFHJHV6ZLYNX3OQS2IJTN",
 			"alias":"v1",

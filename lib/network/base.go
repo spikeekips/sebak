@@ -8,7 +8,6 @@ import (
 	"github.com/gorilla/mux"
 
 	"boscoin.io/sebak/lib/common"
-	"boscoin.io/sebak/lib/node"
 )
 
 type Network interface {
@@ -35,7 +34,8 @@ type Network interface {
 type NetworkClient interface {
 	Endpoint() *common.Endpoint
 
-	Connect(node node.Node) ([]byte, error)
+	Alive() error
+	Connect(common.Serializable) ([]byte, error)
 	GetNodeInfo() ([]byte, error)
 	SendMessage(common.Serializable) ([]byte, error)
 	SendTransaction(common.Serializable) ([]byte, error)

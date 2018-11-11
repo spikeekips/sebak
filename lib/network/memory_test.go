@@ -9,6 +9,7 @@ import (
 	"boscoin.io/sebak/lib/node"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/stretchr/testify/require"
 )
 
 type DummyMessage struct {
@@ -107,7 +108,7 @@ func TestMemoryNetworkGetNodeInfo(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	v, err := node.NewValidatorFromString(b)
+	v, err := node.NewValidatorFromJSON(b)
 	if err != nil {
 		t.Error(err)
 		return
@@ -121,25 +122,9 @@ func TestMemoryNetworkGetNodeInfo(t *testing.T) {
 	}
 }
 
-func TestMemoryNetworkConnect(t *testing.T) {
-	_, s0, localNode := CreateMemoryNetwork(nil)
-
+func TestMemoryNetworkAlive(t *testing.T) {
+	_, s0, _ := CreateMemoryNetwork(nil)
 	c0 := s0.GetClient(s0.Endpoint())
-	b, err := c0.Connect(localNode)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	v, err := node.NewValidatorFromString(b)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if localNode.Endpoint().String() != v.Endpoint().String() {
-		t.Errorf("received node info mismatch; '%s' != '%s'", localNode.Endpoint().String(), v.Endpoint().String())
-	}
-	if localNode.Address() != v.Address() {
-		t.Errorf("received node info mismatch; '%s' != '%s'", localNode.Address(), v.Address())
-		return
-	}
+	err := c0.Alive()
+	require.NoError(t, err)
 }

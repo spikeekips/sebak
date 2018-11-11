@@ -3,7 +3,6 @@ package network
 import (
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/errors"
-	"boscoin.io/sebak/lib/node"
 )
 
 type MemoryTransportClient struct {
@@ -23,8 +22,11 @@ func (m *MemoryTransportClient) Endpoint() *common.Endpoint {
 	return m.endpoint
 }
 
-func (m *MemoryTransportClient) Connect(node node.Node) (b []byte, err error) {
-	b = m.server.GetNodeInfo()
+func (m *MemoryTransportClient) Connect(common.Serializable) (b []byte, err error) {
+	return
+}
+
+func (m *MemoryTransportClient) Alive() (err error) {
 	return
 }
 

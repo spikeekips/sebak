@@ -3,6 +3,8 @@ package runner
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"boscoin.io/sebak/lib/ballot"
 	"boscoin.io/sebak/lib/block"
 	"boscoin.io/sebak/lib/common"
@@ -12,7 +14,6 @@ import (
 	"boscoin.io/sebak/lib/node"
 	"boscoin.io/sebak/lib/transaction"
 	"boscoin.io/sebak/lib/voting"
-	"github.com/stretchr/testify/require"
 )
 
 var networkID []byte = []byte("sebak-unittest")
@@ -28,6 +29,7 @@ func MakeNodeRunner() (*NodeRunner, *node.LocalNode) {
 		localNode,
 		n,
 		policy,
+		conf,
 	)
 
 	st := block.InitTestBlockchain()

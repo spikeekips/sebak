@@ -246,7 +246,7 @@ func parseFlagValidators(v string) (vs []*node.Validator, err error) {
 		}
 
 		var validator *node.Validator
-		if validator, err = node.NewValidatorFromURI(v); err != nil {
+		if validator, err = node.NewValidatorFromString(v); err != nil {
 			return
 		}
 		vs = append(vs, validator)
@@ -500,12 +500,6 @@ func runNode() error {
 		return err
 	}
 
-	connectionManager := network.NewValidatorConnectionManager(
-		localNode,
-		nt,
-		policy,
-	)
-
 	conf := common.Config{
 		TimeoutINIT:       timeoutINIT,
 		TimeoutSIGN:       timeoutSIGN,
@@ -518,6 +512,9 @@ func runNode() error {
 		RateLimitRuleAPI:  rateLimitRuleAPI,
 		RateLimitRuleNode: rateLimitRuleNode,
 	}
+
+	connectionManager := network.NewValidatorConnectionManager(localNode, nt, policy, conf)
+
 	st, err := storage.NewStorage(storageConfig)
 	if err != nil {
 		log.Crit("failed to initialize storage", "error", err)

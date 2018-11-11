@@ -40,6 +40,7 @@ func (p *HelperTestNodeMessageHandler) Prepare() {
 		p.TransactionPool,
 		network.UrlPathPrefixNode,
 		p.conf,
+		nil,
 	)
 
 	// override existing handler

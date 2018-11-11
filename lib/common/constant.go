@@ -33,6 +33,10 @@ const (
 
 	// BlockHeightEndOfInflation sets the block height of inflation end.
 	BlockHeightEndOfInflation uint64 = 36000000
+
+	// ConnectMessageCreatedAllowDuration limit the `ConnectMessage.Created` is
+	// allowed or not.
+	ConnectMessageCreatedAllowDuration time.Duration = time.Second * 10
 )
 
 var (

@@ -18,4 +18,6 @@ type ConnectionManager interface {
 	AllValidators() []string
 	CountConnected() int
 	GetNode(address string) node.Node
+	ReceiveConnect(ConnectMessage)
+	IsReady() bool
 }

@@ -54,11 +54,7 @@ func createTestNodeRunner(n int, conf common.Config) []*NodeRunner {
 		localNode := nodes[i]
 		policy, _ := consensus.NewDefaultVotingThresholdPolicy(66)
 
-		connectionManager := network.NewValidatorConnectionManager(
-			localNode,
-			ns[i],
-			policy,
-		)
+		connectionManager := network.NewValidatorConnectionManager(localNode, ns[i], policy, conf)
 
 		st := block.InitTestBlockchain()
 		is, _ := consensus.NewISAAC(localNode, policy, connectionManager, st, conf, nil)
@@ -142,14 +138,10 @@ func createTestNodeRunnersHTTP2Network(n int) (nodeRunners []*NodeRunner, rootKP
 		policy, _ := consensus.NewDefaultVotingThresholdPolicy(66)
 		networkConfig, _ := network.NewHTTP2NetworkConfigFromEndpoint(node.Alias(), node.Endpoint())
 		n := network.NewHTTP2Network(networkConfig)
-
-		connectionManager := network.NewValidatorConnectionManager(
-			node,
-			n,
-			policy,
-		)
-
 		conf := common.NewTestConfig()
+
+		connectionManager := network.NewValidatorConnectionManager(node, n, policy, conf)
+
 		st := block.InitTestBlockchain()
 		is, _ := consensus.NewISAAC(node, policy, connectionManager, st, conf, nil)
 		nodeRunner, _ := NewNodeRunner(node, policy, n, is, st, conf)
@@ -173,33 +165,27 @@ func createTestNodeRunnersHTTP2NetworkWithReady(n int) (nodeRunners []*NodeRunne
 		}(nr)
 	}
 
-	T := time.NewTicker(100 * time.Millisecond)
-	stopTimer := make(chan bool)
-
-	go func() {
-		time.Sleep(5 * time.Second)
-		stopTimer <- true
-	}()
-
-	go func() {
-		for _ = range T.C {
+	for {
+		select {
+		case <-time.After(time.Second * 5):
+			panic(fmt.Errorf("NodeRunners failed to be ready"))
+		default:
 			var notyet bool
 			for _, nr := range nodeRunners {
-				if nr.ConnectionManager().CountConnected() != n {
+				if !nr.ConnectionManager().IsReady() {
 					notyet = true
 					break
 				}
 			}
-			if notyet {
-				continue
+
+			if !notyet {
+				goto end
 			}
-			stopTimer <- true
 		}
-	}()
-	select {
-	case <-stopTimer:
-		T.Stop()
 	}
+
+end:
+	//
 
 	return
 }

@@ -203,9 +203,9 @@ func (nr *NodeRunner) Ready() {
 		nr.TransactionPool,
 		network.UrlPathPrefixNode,
 		nr.Conf,
+		nr.connectionManager,
 	)
 
-	nr.network.AddHandler(nodeHandler.HandlerURLPattern(NodeInfoHandlerPattern), nodeHandler.NodeInfoHandler)
 	nr.network.AddHandler(nodeHandler.HandlerURLPattern(ConnectHandlerPattern), nodeHandler.ConnectHandler).
 		Methods("POST").
 		Headers("Content-Type", "application/json")
@@ -221,6 +221,8 @@ func (nr *NodeRunner) Ready() {
 	nr.network.AddHandler(nodeHandler.HandlerURLPattern(GetTransactionPattern), nodeHandler.GetNodeTransactionsHandler).
 		Methods("GET", "POST").
 		MatcherFunc(common.PostAndJSONMatcher)
+	nr.network.AddHandler(nodeHandler.HandlerURLPattern(AliveHandlerPattern), nodeHandler.AliveHandler).
+		Methods("GET")
 
 	nr.network.AddHandler(network.UrlPathPrefixMetric, promhttp.Handler().ServeHTTP)
 
@@ -303,10 +305,9 @@ func (nr *NodeRunner) Start() (err error) {
 	nr.log.Debug("NodeRunner started")
 	nr.Ready()
 
-	go nr.handleMessages()
 	go nr.ConnectValidators()
-	go nr.InitRound()
 	go nr.savingBlockOperations.Start()
+	go nr.handleMessages()
 
 	if err = nr.network.Start(); err != nil {
 		return
@@ -361,6 +362,7 @@ func (nr *NodeRunner) ISAACStateManager() *ISAACStateManager {
 }
 
 func (nr *NodeRunner) ConnectValidators() {
+	nr.log.Debug("current node is not ready")
 	ticker := time.NewTicker(time.Millisecond * 5)
 	for _ = range ticker.C {
 		if !nr.network.IsReady() {
@@ -370,11 +372,24 @@ func (nr *NodeRunner) ConnectValidators() {
 		ticker.Stop()
 		break
 	}
-	nr.log.Debug("current node is ready")
-	nr.log.Debug("trying to connect to the validators", "validators", nr.localNode.GetValidators())
 
-	nr.log.Debug("initializing connectionManager for validators")
+	nr.log.Debug("network is ready")
+
 	nr.connectionManager.Start()
+
+	nr.log.Info(
+		"got the enough validators for consensus",
+		"validators", nr.connectionManager.AllConnected(),
+		"all validators", logging.Lazy{func() []string {
+			var vs []string
+			for _, v := range nr.localNode.GetValidators() {
+				vs = append(vs, v.Address())
+			}
+			return vs
+		}},
+	)
+
+	go nr.InitRound()
 }
 
 func (nr *NodeRunner) SetHandleBaseBallotCheckerFuncs(f ...common.CheckerFunc) {
@@ -409,11 +424,6 @@ func (nr *NodeRunner) handleMessage(message common.NetworkMessage) {
 		return
 	}
 	switch message.Type {
-	case common.ConnectMessage:
-		if _, err := node.NewValidatorFromString(message.Data); err != nil {
-			nr.log.Error("invalid validator data was received", "data", message.Data, "error", err)
-			return
-		}
 	case common.BallotMessage:
 		err = nr.handleBallotMessage(message)
 	default:
@@ -490,26 +500,7 @@ func (nr *NodeRunner) InitRound() {
 	// get latest blocks
 	nr.consensus.SetLatestVotingBasis(voting.Basis{})
 
-	nr.waitForConnectingEnoughNodes()
 	nr.startStateManager()
-}
-
-func (nr *NodeRunner) waitForConnectingEnoughNodes() {
-	ticker := time.NewTicker(time.Millisecond * 5)
-	for _ = range ticker.C {
-		connected := nr.connectionManager.AllConnected()
-		if len(connected) >= nr.policy.Threshold() {
-			ticker.Stop()
-			break
-		}
-	}
-	nr.log.Debug(
-		"caught up network and connected to enough validators",
-		"connected", nr.Policy().Connected(),
-		"validators", nr.Policy().Validators(),
-	)
-
-	return
 }
 
 func (nr *NodeRunner) startStateManager() {

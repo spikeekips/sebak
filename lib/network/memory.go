@@ -4,9 +4,10 @@ import (
 	"net"
 	"net/http"
 
-	"boscoin.io/sebak/lib/common"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+
+	"boscoin.io/sebak/lib/common"
 )
 
 type MemoryNetwork struct {

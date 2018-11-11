@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ulule/limiter"
 )
 
@@ -113,6 +115,29 @@ func (e *Endpoint) UnmarshalJSON(b []byte) error {
 
 func (e *Endpoint) MarshalJSON() ([]byte, error) {
 	return json.Marshal(e.String())
+}
+
+func (e *Endpoint) EncodeRLP(w io.Writer) error {
+	u := &url.URL{
+		Scheme: e.Scheme,
+		Host:   e.Host,
+		Path:   e.Path,
+	}
+	return rlp.Encode(w, u)
+}
+
+func (e *Endpoint) Equal(n *Endpoint) bool {
+	if e.Scheme != n.Scheme {
+		return false
+	}
+	if e.Host != n.Host {
+		return false
+	}
+	if e.Path != n.Path {
+		return false
+	}
+
+	return true
 }
 
 func ParseEndpoint(endpoint string) (u *Endpoint, err error) {

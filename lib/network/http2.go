@@ -9,12 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"boscoin.io/sebak/lib/common"
-	"boscoin.io/sebak/lib/errors"
-	"boscoin.io/sebak/lib/node"
 	"github.com/gorilla/mux"
 	logging "github.com/inconshreveable/log15"
 	"golang.org/x/net/http2"
+
+	"boscoin.io/sebak/lib/common"
+	"boscoin.io/sebak/lib/errors"
+	"boscoin.io/sebak/lib/node"
 )
 
 type Handlers map[string]func(http.ResponseWriter, *http.Request)

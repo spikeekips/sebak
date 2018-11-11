@@ -24,7 +24,7 @@ func NewTestConnectionManager(
 	r chan struct{},
 ) *TestConnectionManager {
 	p := &TestConnectionManager{
-		ConnectionManager: network.NewValidatorConnectionManager(localNode, n, policy),
+		ConnectionManager: network.NewValidatorConnectionManager(localNode, n, policy, common.Config{}),
 	}
 	p.messages = []common.Message{}
 	p.recv = r
