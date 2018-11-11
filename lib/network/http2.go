@@ -233,7 +233,7 @@ func (t *HTTP2Network) IsReady() bool {
 	}
 
 	h2n := NewHTTP2NetworkClient(t.Endpoint(), client)
-	if _, err := h2n.GetNodeInfo(); err != nil {
+	if err := h2n.Alive(); err != nil {
 		return false
 	}
 

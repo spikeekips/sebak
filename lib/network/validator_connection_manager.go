@@ -99,7 +99,7 @@ func (c *ValidatorConnectionManager) Start() {
 	}
 
 	go func() {
-		ticker := time.NewTicker(time.Second * 1)
+		ticker := time.NewTicker(time.Second * 5)
 		for _ = range ticker.C {
 			logCurrentState()
 		}
@@ -408,8 +408,8 @@ func (c *ValidatorConnectionManager) sendConnectMessage(cm ConnectMessage, addre
 		return
 	}
 
-	if err = received.IsWellFormed(common.Config{}); err != nil {
-		c.log.Error("failed to  ConnectMessage.IsWellFormed()", "error", err, "cm", received)
+	if err = received.IsWellFormed(c.config); err != nil {
+		c.log.Error("failed to ConnectMessage.IsWellFormed()", "error", err, "cm", received)
 		return
 	}
 
