@@ -229,6 +229,7 @@ func (sb *SavingBlockOperations) savingBlockOperationsWorker(id int, st *storage
 }
 
 func (sb *SavingBlockOperations) CheckByBlock(st *storage.LevelDBBackend, blk block.Block) (err error) {
+	sb.log.Debug("trying to check block", "height", blk.Height)
 	if blk.Height > common.GenesisBlockHeight { // ProposerTransaction
 		if err = sb.CheckTransactionByBlock(st, blk, blk.ProposerTransaction); err != nil {
 			return
@@ -281,6 +282,7 @@ errorCheck:
 		return
 	}
 
+	sb.log.Debug("block checked", "height", blk.Height)
 	return
 }
 

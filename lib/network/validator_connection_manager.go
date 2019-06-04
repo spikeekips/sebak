@@ -2,7 +2,6 @@ package network
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
@@ -181,7 +180,7 @@ func (c *ValidatorConnectionManager) connectingValidator(v *node.Validator) {
 
 				if !c.connectedEqualOrOverThreshold {
 					c.connectedEqualOrOverThreshold = true
-					c.updateBallots()
+					//c.updateBallots()
 				}
 
 			} else {
@@ -285,18 +284,17 @@ func (c *ValidatorConnectionManager) connectValidator(v *node.Validator) (err er
 	client := c.GetConnection(v.Address())
 
 	var b []byte
-	b, err = client.Connect(c.localNode)
+	b, err = client.GetNodeInfo()
 	if err != nil {
 		return
 	}
 
 	// load and check validator info; addresses are same?
-	var validator node.Validator
-	err = json.Unmarshal(b, &validator)
+	ni, err := node.NewNodeInfoFromJSON(b)
 	if err != nil {
 		return
 	}
-	if v.Address() != validator.Address() {
+	if v.Address() != ni.Node.Address {
 		err = errors.New("address is mismatch")
 		return
 	}
